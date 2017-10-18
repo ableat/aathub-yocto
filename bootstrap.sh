@@ -65,7 +65,6 @@ apt_dependencies=(
     "xterm"
 )
 dnf_dependencies=(
-    "getopts"
     "gawk"
     "make"
     "wget"
@@ -110,8 +109,6 @@ command -v dnf >/dev/null 2>&1 && dnf update && dnf install -y "${dnf_dependenci
 #Install ubuntu/debian dependencies
 command -v apt >/dev/null 2>&1 && apt update && apt install -y "${apt_dependencies[@]}"
 
-
-
 _usage() {
     cat << EOF
 
@@ -143,7 +140,6 @@ mkdir "${TEMP_DIR}" || _die "Failed to create temporary directory"
 
 _debug "Cloning the yocto project..."
 git clone git://git.yoctoproject.org/poky "${TEMP_DIR}"/poky || _die "Failed to clone yocto repository"
-cd "${TEMP_DIR}"/poky
 
 _debug "Checking out latest release..."
-git checkout pyro
+git --git-dir="${TEMP_DIR}"/poky/.git --work-tree="${TEMP_DIR}"/poky checkout pyro
