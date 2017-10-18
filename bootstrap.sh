@@ -139,7 +139,7 @@ while getopts ':h :v r:' option; do
 done
 shift $((OPTIND - 1))
 
-_debug "Creating temporary directory..."
+_debug "Creating temporary directory: ${TEMP_DIR}"
 mkdir "${TEMP_DIR}" || _die "Failed to create temporary directory"
 
 _debug "Cloning poky..."
@@ -147,3 +147,6 @@ git clone -b "${RELEASE}" git://git.yoctoproject.org/poky "${TEMP_DIR}"/poky || 
 
 _debug "Cloning meta-raspberrypi..."
 git clone -b "${RELEASE}" git://git.yoctoproject.org/meta-raspberrypi "${TEMP_DIR}"/poky/meta-raspberrypi || _die "Failed to clone meta-raspberrypi repository"
+
+_debug "Setup yocto build..."
+source "${TEMP_DIR}"/poky/oe-init-build-env "${TEMP_DIR}"/rpi/build
