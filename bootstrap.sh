@@ -103,6 +103,7 @@ dnf_dependencies=(
     "xterm"
 )
 
+_debug "Installing package dependencies..."
 #Install fedora dependencies
 command -v dnf >/dev/null 2>&1 && dnf update && dnf install -y "${dnf_dependencies[@]}"
 
@@ -114,7 +115,7 @@ command -v apt >/dev/null 2>&1 && apt update && apt install -y "${apt_dependenci
 _usage() {
     cat << EOF
 
-${0##*/} [-h] [-v] -- setup yocto development environment
+${0##*/} [-h] [-v] -- setup yocto development environment on host
 where:
     -h  show this help text
     -v  verbose
@@ -137,8 +138,12 @@ while getopts ':h :v' option; do
 done
 shift $((OPTIND - 1))
 
+_debug "Creating temporary directory..."
 mkdir "${TEMP_DIR}" || _die "Failed to create temporary directory"
 
+_debug "Cloning the yocto project..."
 git clone git://git.yoctoproject.org/poky "${TEMP_DIR}"/poky || _die "Failed to clone yocto repository"
 cd "${TEMP_DIR}"/poky
+
+_debug "Checking out latest release..."
 git checkout pyro
