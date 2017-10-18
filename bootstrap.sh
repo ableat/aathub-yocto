@@ -1,8 +1,8 @@
 #!/bin/bash
 
-TEMP_DIR=$(mktemp --directory --dry-run -t yocto.XXXXXXXX) #There are better ways of doing this.
 VERBOSE=0
 RELEASE="pyro" #This can be overwritten with a command line parameter
+BASE_PATH="/tmp"
 
 RED="\033[0;31m"
 GREEN="\033[32m"
@@ -113,16 +113,17 @@ command -v apt >/dev/null 2>&1 && apt update && apt install -y "${apt_dependenci
 _usage() {
     cat << EOF
 
-${0##*/} [-h] [-v] [-r string] -- setup yocto development environment on host
+${0##*/} [-h] [-v] [-r string] [-t path/to/directory] -- setup yocto development environment on host
 where:
     -h  show this help text
     -r  set yocto project release (default: pyro)
+    -t  set path for temporary files (default: /tmp)
     -v  verbose
 
 EOF
 }
 
-while getopts ':h :v r:' option; do
+while getopts ':h :v r: t:' option; do
     case "${option}" in
         h|\?) _usage
            exit 0
@@ -131,6 +132,8 @@ while getopts ':h :v r:' option; do
            ;;
         r) RELEASE="${OPTARG}"
            ;;
+        t) BASE_PATH="${OPTARG}"
+           ;;
         :) printf "missing argument for -%s\n" "${OPTARG}"
            _usage
            exit 1
@@ -138,6 +141,8 @@ while getopts ':h :v r:' option; do
     esac
 done
 shift $((OPTIND - 1))
+
+TEMP_DIR=$(mktemp -t yocto.XXXXXXXX -p "${BASE_PATH}" --directory --dry-run) #There are better ways of doing this.
 
 _debug "Creating temporary directory: ${TEMP_DIR}"
 mkdir "${TEMP_DIR}" || _die "Failed to create temporary directory"
