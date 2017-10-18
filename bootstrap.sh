@@ -1,6 +1,6 @@
 #!/bin/bash
 
-TEMP_DIR=$(mktemp --directory --dry-run) #There are better ways of doing this.
+TEMP_DIR=$(mktemp --directory --dry-run -t yocto.XXXXXXXX) #There are better ways of doing this.
 VERBOSE=0
 RELEASE="pyro" #This can be overwritten with a command line parameter
 
@@ -149,4 +149,40 @@ _debug "Cloning meta-raspberrypi..."
 git clone -b "${RELEASE}" git://git.yoctoproject.org/meta-raspberrypi "${TEMP_DIR}"/poky/meta-raspberrypi || _die "Failed to clone meta-raspberrypi repository"
 
 _debug "Setup yocto build..."
+mkdir -p "${TEMP_DIR}"/rpi/build
 source "${TEMP_DIR}"/poky/oe-init-build-env "${TEMP_DIR}"/rpi/build
+
+#Overwrite default bblayers.conf
+rm "${TEMP_DIR}"/rpi/build/conf/bblayers.conf
+cat << EOF >> "${TEMP_DIR}"/rpi/build/conf/bblayers.conf || _die "Failed to create ${TEMP_DIR}/rpi/build/conf/bblayers.conf"
+# POKY_BBLAYERS_CONF_VERSION is increased each time build/conf/bblayers.conf
+# changes incompatibly
+POKY_BBLAYERS_CONF_VERSION = "2"
+
+BBPATH = "\${TOPDIR}"
+BBFILES ?= ""
+
+BBLAYERS ?= " \
+  ${TEMP_DIR}/poky/meta \
+  ${TEMP_DIR}/poky/meta-poky \
+  ${TEMP_DIR}/poky/meta-yocto-bsp \
+  ${TEMP_DIR}/poky/meta-raspberrypi \
+  "
+EOF
+
+#Append local.conf
+cat << EOF >> "${TEMP_DIR}"/rpi/build/conf/local.conf || _die "Failed to append ${TEMP_DIR}/rpi/build/conf/local.conf"
+MACHINE ?= "raspberrypi"
+EOF
+
+cat << EOF >> "${TEMP_DIR}"/rpi/build/conf/sanity.conf || _die "Failed to create ${TEMP_DIR}/rpi/build/conf/sanity.conf"
+MACHINE ?= "raspberrypi"
+EOF
+
+_debug "Configure bitbake to run as root..."
+sed -e '/INHERIT/ s/^#*/#/' -i "${TEMP_DIR}"/poky/meta/conf/sanity.conf || _die "Failed to comment out line in sanity.conf"
+
+_debug "Building image..."
+bitbake core-image-minimal
+
+
