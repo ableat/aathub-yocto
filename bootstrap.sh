@@ -2,6 +2,7 @@
 
 TEMP_DIR=$(mktemp --directory --dry-run) #There are better ways of doing this.
 VERBOSE=0
+RELEASE="pyro" #This can be overwritten with a command line parameter
 
 RED="\033[0;31m"
 GREEN="\033[32m"
@@ -112,20 +113,23 @@ command -v apt >/dev/null 2>&1 && apt update && apt install -y "${apt_dependenci
 _usage() {
     cat << EOF
 
-${0##*/} [-h] [-v] -- setup yocto development environment on host
+${0##*/} [-h] [-v] [-r string] -- setup yocto development environment on host
 where:
     -h  show this help text
+    -r  set yocto project release (default: pyro)
     -v  verbose
 
 EOF
 }
 
-while getopts ':h :v' option; do
+while getopts ':h :v r:' option; do
     case "${option}" in
         h|\?) _usage
            exit 0
               ;;
         v) VERBOSE=1
+           ;;
+        r) RELEASE="${OPTARG}"
            ;;
         :) printf "missing argument for -%s\n" "${OPTARG}"
            _usage
@@ -138,8 +142,8 @@ shift $((OPTIND - 1))
 _debug "Creating temporary directory..."
 mkdir "${TEMP_DIR}" || _die "Failed to create temporary directory"
 
-_debug "Cloning the yocto project..."
-git clone git://git.yoctoproject.org/poky "${TEMP_DIR}"/poky || _die "Failed to clone yocto repository"
+_debug "Cloning poky..."
+git clone -b "${RELEASE}" git://git.yoctoproject.org/poky "${TEMP_DIR}"/poky || _die "Failed to clone poky repository"
 
-_debug "Checking out latest release..."
-git --git-dir="${TEMP_DIR}"/poky/.git --work-tree="${TEMP_DIR}"/poky checkout pyro
+_debug "Cloning meta-raspberrypi..."
+git clone -b "${RELEASE}" git://git.yoctoproject.org/meta-raspberrypi "${TEMP_DIR}"/poky/meta-raspberrypi || _die "Failed to clone meta-raspberrypi repository"
