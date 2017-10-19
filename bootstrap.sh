@@ -180,14 +180,12 @@ cat << EOF >> "${TEMP_DIR}"/rpi/build/conf/local.conf || _die "Failed to append 
 MACHINE ?= "raspberrypi"
 EOF
 
-cat << EOF >> "${TEMP_DIR}"/rpi/build/conf/sanity.conf || _die "Failed to create ${TEMP_DIR}/rpi/build/conf/sanity.conf"
-MACHINE ?= "raspberrypi"
-EOF
-
 _debug "Configure bitbake to run as root..."
 sed -e '/INHERIT/ s/^#*/#/' -i "${TEMP_DIR}"/poky/meta/conf/sanity.conf || _die "Failed to comment out line in sanity.conf"
 
 _debug "Building image..."
-bitbake core-image-minimal
+bitbake core-image-minimal || _die "Failed to build image"
+
+_success "The image can be found in the following directory: ${TEMP_DIR}/rpi/build/tmp/deploy/images/"
 
 
