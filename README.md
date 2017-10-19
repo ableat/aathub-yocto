@@ -5,7 +5,7 @@
   <br>
 </h1>
 
-<h4 align="center">A build system without the bullshit</h4>
+<h4 align="center">A build system without any of the bullshit</h4>
 
 <br>
 
@@ -13,7 +13,14 @@
 ## How to use
 
 ```
-./bootstrap.sh -v -t /path/to/tmp
+./bootstrap.sh -v
 ```
 
-Run `./bootstrap.sh -h` for help
+For assistance run the following command
+```
+./bootstrap.sh -h
+```
+
+## Things to consider
+
+The build takes 4+ hours (depending on the machine) to complete, and requires upwards of 80GB of space.
