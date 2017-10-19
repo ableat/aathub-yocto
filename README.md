@@ -12,11 +12,14 @@
 
 ## How to use
 
+Kick off the build process with the following command:
 ```
 ./bootstrap.sh -v
 ```
 
-For assistance run the following command
+<br>
+
+For assistance run the following command:
 ```
 ./bootstrap.sh -h
 ```
@@ -24,3 +27,5 @@ For assistance run the following command
 ## Things to consider
 
 The build takes 4+ hours (depending on the machine) to complete, and requires upwards of 80GB of space.
+
+This has been sucessfully tested on ubuntu/debian and fedora.
