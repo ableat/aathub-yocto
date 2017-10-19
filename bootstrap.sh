@@ -37,9 +37,9 @@ _cleanup() {
     rm -rf ${TEMP_DIR}
 }
 
-#Check if the script is ran without permissions
-if [[ "${EUID}" -ne 0 ]]; then
-    _die "${0##*/} must be ran as sudo"
+#Check if the script is ran with elevated permissions
+if [[ "${EUID}" -eq 1 ]]; then
+    _die "${0##*/} should not be ran as sudo"
 fi
 
 apt_dependencies=(
@@ -105,10 +105,10 @@ dnf_dependencies=(
 
 _debug "Installing package dependencies..."
 #Install fedora dependencies
-command -v dnf >/dev/null 2>&1 && dnf update && dnf install -y "${dnf_dependencies[@]}"
+command -v dnf >/dev/null 2>&1 && sudo dnf update -y && sudo dnf install -y "${dnf_dependencies[@]}"
 
 #Install ubuntu/debian dependencies
-command -v apt >/dev/null 2>&1 && apt update && apt install -y "${apt_dependencies[@]}"
+command -v apt >/dev/null 2>&1 && sudo apt update -y && sudo apt install -y "${apt_dependencies[@]}"
 
 _usage() {
     cat << EOF
@@ -179,9 +179,6 @@ EOF
 cat << EOF >> "${TEMP_DIR}"/rpi/build/conf/local.conf || _die "Failed to append ${TEMP_DIR}/rpi/build/conf/local.conf"
 MACHINE ?= "raspberrypi"
 EOF
-
-_debug "Configure bitbake to run as root..."
-sed -e '/INHERIT/ s/^#*/#/' -i "${TEMP_DIR}"/poky/meta/conf/sanity.conf || _die "Failed to comment out line in sanity.conf"
 
 _debug "Building image..."
 bitbake core-image-minimal || _die "Failed to build image"
