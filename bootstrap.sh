@@ -150,6 +150,9 @@ mkdir "${TEMP_DIR}" || _die "Failed to create temporary directory"
 _debug "Cloning poky..."
 git clone -b "${RELEASE}" git://git.yoctoproject.org/poky "${TEMP_DIR}"/poky || _die "Failed to clone poky repository"
 
+_debug "Cloning meta-openembedded..."
+git clone -b "${RELEASE}" git://git.openembedded.org/meta-openembedded "${TEMP_DIR}"/poky/meta-openembedded || _die "Failed to clone meta-openembedded repository"
+
 _debug "Cloning meta-raspberrypi..."
 git clone -b "${RELEASE}" git://git.yoctoproject.org/meta-raspberrypi "${TEMP_DIR}"/poky/meta-raspberrypi || _die "Failed to clone meta-raspberrypi repository"
 
@@ -171,18 +174,25 @@ BBLAYERS ?= " \
   ${TEMP_DIR}/poky/meta \
   ${TEMP_DIR}/poky/meta-poky \
   ${TEMP_DIR}/poky/meta-yocto-bsp \
+  ${TEMP_DIR}/poky/meta-openembedded/meta-oe \
+  ${TEMP_DIR}/poky/meta-openembedded/meta-multimedia \
   ${TEMP_DIR}/poky/meta-raspberrypi \
   "
+
+BBLAYERS_NON_REMOVABLE ?= " \
+  ${TEMP_DIR}/poky/meta \
+  ${TEMP_DIR}/poky/meta-poky \
+  "
+
 EOF
 
 #Append local.conf
 cat << EOF >> "${TEMP_DIR}"/rpi/build/conf/local.conf || _die "Failed to append ${TEMP_DIR}/rpi/build/conf/local.conf"
-MACHINE ?= "raspberrypi"
+MACHINE ??= "raspberrypi3"
 EOF
 
 _debug "Building image..."
-bitbake core-image-minimal || _die "Failed to build image"
-
-_success "The image can be found in the following directory: ${TEMP_DIR}/rpi/build/tmp/deploy/images/"
+bitbake rpi-basic-image || _die "Failed to build image"
+_success "The image can be found in the following directory: ${TEMP_DIR}/rpi/build/tmp/deploy/images/raspberrypi/rpi-basic-image-raspberrypi.rpi-sdimg"
 
 
