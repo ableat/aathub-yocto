@@ -1,8 +1,10 @@
 #!/bin/bash
 
+#Defaults
 VERBOSE=0
-RELEASE="pyro" #This can be overwritten with a command line parameter
+RELEASE="pyro"
 BASE_PATH="/tmp"
+TARGET="raspberrypi3"
 
 RED="\033[0;31m"
 GREEN="\033[32m"
@@ -113,17 +115,18 @@ command -v apt >/dev/null 2>&1 && sudo apt update -y && sudo apt install -y "${a
 _usage() {
     cat << EOF
 
-${0##*/} [-h] [-v] [-r string] [-t path/to/directory] -- setup yocto development environment on host
+${0##*/} [-h] [-v] [-r string] [-b path/to/directory] [-t string] -- setup yocto and compile target image
 where:
     -h  show this help text
     -r  set yocto project release (default: pyro)
-    -t  set path for temporary files (default: /tmp)
+    -b  set path for temporary files (default: /tmp)
+    -t  set target (default: raspberrypi3)
     -v  verbose
 
 EOF
 }
 
-while getopts ':h :v r: t:' option; do
+while getopts ':h :v r: t: b:' option; do
     case "${option}" in
         h|\?) _usage
            exit 0
@@ -132,7 +135,9 @@ while getopts ':h :v r: t:' option; do
            ;;
         r) RELEASE="${OPTARG}"
            ;;
-        t) BASE_PATH="${OPTARG}"
+        b) BASE_PATH="${OPTARG}"
+           ;;
+        t) TARGET="${OPTARG}"
            ;;
         :) printf "missing argument for -%s\n" "${OPTARG}"
            _usage
@@ -176,6 +181,8 @@ BBLAYERS ?= " \
   ${TEMP_DIR}/poky/meta-yocto-bsp \
   ${TEMP_DIR}/poky/meta-openembedded/meta-oe \
   ${TEMP_DIR}/poky/meta-openembedded/meta-multimedia \
+  ${TEMP_DIR}/poky/meta-openembedded/meta-networking \
+  ${TEMP_DIR}/poky/meta-openembedded/meta-python \
   ${TEMP_DIR}/poky/meta-raspberrypi \
   "
 
@@ -188,11 +195,11 @@ EOF
 
 #Append local.conf
 cat << EOF >> "${TEMP_DIR}"/rpi/build/conf/local.conf || _die "Failed to append ${TEMP_DIR}/rpi/build/conf/local.conf"
-MACHINE ??= "raspberrypi3"
+MACHINE ??= "${TARGET}"
 EOF
 
-_debug "Building image..."
-bitbake rpi-basic-image || _die "Failed to build image"
-_success "The image can be found in the following directory: ${TEMP_DIR}/rpi/build/tmp/deploy/images/raspberrypi/rpi-basic-image-raspberrypi.rpi-sdimg"
+_debug "Building image. Additional images can be found in ${TEMP_DIR}/meta*/recipes*/images/*.bb"
+bitbake rpi-hwup-image || _die "Failed to build image"
+_success "The image can be found in the following directory: ${TEMP_DIR}/rpi/build/tmp/deploy/images/${TARGET}/rpi-basic-image-${TARGET}.rpi-sdimg"
 
 
