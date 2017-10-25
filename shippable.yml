@@ -1,0 +1,21 @@
+language: node_js
+
+node_js:
+  - "8.8.0"
+
+branches:
+  only:
+    - master
+
+build:
+  ci:
+    - sudo apt-get -y update
+    - sudo apt-get install -y nfs-common
+    - cd ci/utilities
+    - npm install
+    - node ci/utilities/createFS.js
+    - sleep 10
+    - cd
+    - mkdir efs
+    - mount -t nfs4 "${FILE_SYSTEM_ID}".efs.us-east-1.amazonaws.com:/ efs/
+    - ./bootstrap.sh -v -b efs/
