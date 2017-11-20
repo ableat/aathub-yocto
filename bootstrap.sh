@@ -45,7 +45,6 @@ if [[ "${EUID}" -eq 1 ]]; then
 fi
 
 apt_dependencies=(
-    "getopts"
     "gawk"
     "wget"
     "git-core"
@@ -105,13 +104,6 @@ dnf_dependencies=(
     "xterm"
 )
 
-_debug "Installing package dependencies..."
-#Install fedora dependencies
-command -v dnf >/dev/null 2>&1 && sudo dnf update -y && sudo dnf install -y "${dnf_dependencies[@]}"
-
-#Install ubuntu/debian dependencies
-command -v apt >/dev/null 2>&1 && sudo apt update -y && sudo apt install -y "${apt_dependencies[@]}"
-
 _usage() {
     cat << EOF
 
@@ -121,7 +113,7 @@ where:
     -r  set yocto project release (default: pyro)
     -b  set path for temporary files (default: /tmp)
     -t  set target (default: raspberrypi3)
-    -v  verbose
+    -v  verbose output
 
 EOF
 }
@@ -146,6 +138,13 @@ while getopts ':h :v r: t: b:' option; do
     esac
 done
 shift $((OPTIND - 1))
+
+_debug "Installing package dependencies..."
+#Install fedora dependencies
+command -v dnf >/dev/null 2>&1 && sudo dnf update -y && sudo dnf install -y "${dnf_dependencies[@]}"
+
+#Install ubuntu/debian dependencies
+command -v apt >/dev/null 2>&1 && sudo apt update -y && sudo apt install -y "${apt_dependencies[@]}"
 
 TEMP_DIR=$(mktemp -t yocto.XXXXXXXX -p "${BASE_PATH}" --directory --dry-run) #There are better ways of doing this.
 
