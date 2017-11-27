@@ -146,6 +146,11 @@ command -v dnf >/dev/null 2>&1 && sudo dnf update -y && sudo dnf install -y "${d
 #Install ubuntu/debian dependencies
 command -v apt >/dev/null 2>&1 && sudo apt update -y && sudo apt install -y "${apt_dependencies[@]}"
 
+#Check if directory doesn't exist
+if [ ! -d "${BASE_PATH}" ]; then
+    _die "Directory ${BASE_PATH} does not exist!"
+fi
+
 TEMP_DIR=$(mktemp -t yocto.XXXXXXXX -p "${BASE_PATH}" --directory --dry-run) #There are better ways of doing this.
 
 _debug "Creating temporary directory: ${TEMP_DIR}"
