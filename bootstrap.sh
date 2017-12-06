@@ -165,7 +165,7 @@ _debug "Installing package dependencies..."
 command -v dnf >/dev/null 2>&1 && sudo dnf update -y && sudo dnf install -y "${dnf_dependencies[@]}"
 
 #Install ubuntu/debian dependencies
-command -v apt >/dev/null 2>&1 && sudo apt update -y && sudo apt install -y "${apt_dependencies[@]}"
+command -v apt-get >/dev/null 2>&1 && sudo apt-get update -y && sudo apt-get install -y "${apt_dependencies[@]}"
 
 #Check if directory doesn't exist
 if [ ! -d "${BASE_PATH}" ]; then
