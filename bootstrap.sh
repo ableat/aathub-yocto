@@ -66,6 +66,7 @@ apt_dependencies=(
     "iputils-ping"
     "libsdl1.2-dev"
     "xterm"
+    "s3cmd"
 )
 dnf_dependencies=(
     "gawk"
@@ -103,6 +104,7 @@ dnf_dependencies=(
     "xz"
     "SDL-devel"
     "xterm"
+    "s3cmd"
 )
 
 _usage() {
