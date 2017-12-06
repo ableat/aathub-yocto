@@ -4,7 +4,8 @@
 VERBOSE=0
 RELEASE="pyro"
 BASE_PATH="/tmp"
-TARGET="raspberrypi3"
+YOCTO_TARGET="raspberrypi3"
+YOCTO_BUILD_USER=$(whoami)
 
 RED="\033[0;31m"
 GREEN="\033[32m"
@@ -113,12 +114,13 @@ where:
     -r  set yocto project release (default: pyro)
     -b  set path for temporary files (default: /tmp)
     -t  set target (default: raspberrypi3)
+    -u  set yocto build user
     -v  verbose output
 
 EOF
 }
 
-while getopts ':h :v r: t: b:' option; do
+while getopts ':h :v r: t: b: u:' option; do
     case "${option}" in
         h|\?) _usage
            exit 0
@@ -131,6 +133,8 @@ while getopts ':h :v r: t: b:' option; do
            ;;
         t) TARGET="${OPTARG}"
            ;;
+        u) YOCTO_BUILD_USER="${OPTARG}"
+           ;;
         :) printf "missing argument for -%s\n" "${OPTARG}"
            _usage
            exit 1
@@ -138,6 +142,23 @@ while getopts ':h :v r: t: b:' option; do
     esac
 done
 shift $((OPTIND - 1))
+
+_debug "Checking if build user: ${YOCTO_BUILD_USER} exists..."
+if [ $(id -u "${YOCTO_BUILD_USER}" 2>/dev/null || echo -1) -ge 0 ]; then
+    _debug "Build user already exists"
+else
+    _log "User: ${YOCTO_BUILD_USER} does not exist. Creating..."
+    sudo useradd "${YOCTO_BUILD_USER}" || _die "Failed to create user: ${YOCTO_BUILD_USER}"
+    sudo passwd -d "${YOCTO_BUILD_USER}" || _die "Failed to delete password for user: ${YOCTO_BUILD_USER}"
+    sudo usermod -aG sudo "${YOCTO_BUILD_USER}" || _die "Failed to add user: "${YOCTO_BUILD_USER}" to group: sudo"
+
+    #Only append line if it's absent from the file
+    line="${YOCTO_BUILD_USER} ALL=(ALL) NOPASSWD: ALL"
+    if [ grep -Fxq "${line}" /etc/sudoers ]; then
+        sudo echo "${line}" >> /etc/sudoers
+    fi
+    unset line
+fi
 
 _debug "Installing package dependencies..."
 #Install fedora dependencies
@@ -151,27 +172,25 @@ if [ ! -d "${BASE_PATH}" ]; then
     _die "Directory ${BASE_PATH} does not exist!"
 fi
 
-TEMP_DIR=$(mktemp -t yocto.XXXXXXXX -p "${BASE_PATH}" --directory --dry-run) #There are better ways of doing this.
+YOCTO_TEMP_DIR=$(mktemp -t yocto.XXXXXXXX -p "${BASE_PATH}" --directory --dry-run) #There are better ways of doing this.
 
 _debug "Creating temporary directory: ${TEMP_DIR}"
-mkdir "${TEMP_DIR}" || _die "Failed to create temporary directory"
+mkdir "${YOCTO_TEMP_DIR}" || _die "Failed to create temporary directory: ${YOCTO_TEMP_DIR}"
 
 _debug "Cloning poky..."
-git clone -b "${RELEASE}" git://git.yoctoproject.org/poky "${TEMP_DIR}"/poky || _die "Failed to clone poky repository"
+git clone -b "${RELEASE}" git://git.yoctoproject.org/poky "${YOCTO_TEMP_DIR}"/poky || _die "Failed to clone poky repository"
 
 _debug "Cloning meta-openembedded..."
-git clone -b "${RELEASE}" git://git.openembedded.org/meta-openembedded "${TEMP_DIR}"/poky/meta-openembedded || _die "Failed to clone meta-openembedded repository"
+git clone -b "${RELEASE}" git://git.openembedded.org/meta-openembedded "${YOCTO_TEMP_DIR}"/poky/meta-openembedded || _die "Failed to clone meta-openembedded repository"
 
 _debug "Cloning meta-raspberrypi..."
-git clone -b "${RELEASE}" git://git.yoctoproject.org/meta-raspberrypi "${TEMP_DIR}"/poky/meta-raspberrypi || _die "Failed to clone meta-raspberrypi repository"
+git clone -b "${RELEASE}" git://git.yoctoproject.org/meta-raspberrypi "${YOCTO_TEMP_DIR}"/poky/meta-raspberrypi || _die "Failed to clone meta-raspberrypi repository"
 
-_debug "Setup yocto build..."
-mkdir -p "${TEMP_DIR}"/rpi/build
-source "${TEMP_DIR}"/poky/oe-init-build-env "${TEMP_DIR}"/rpi/build
+#Create custom bblayers.conf
+mkdir -p "${YOCTO_TEMP_DIR}"/rpi/build/conf
+sudo chmod -R 777 "${YOCTO_TEMP_DIR}" || _die "Failed to change directory: ${YOCTO_TEMP_DIR} permissions"
 
-#Overwrite default bblayers.conf
-rm "${TEMP_DIR}"/rpi/build/conf/bblayers.conf
-cat << EOF >> "${TEMP_DIR}"/rpi/build/conf/bblayers.conf || _die "Failed to create ${TEMP_DIR}/rpi/build/conf/bblayers.conf"
+cat << EOF >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/bblayers.conf || _die "Failed to create ${YOCTO_TEMP_DIR}/rpi/build/conf/bblayers.conf"
 # POKY_BBLAYERS_CONF_VERSION is increased each time build/conf/bblayers.conf
 # changes incompatibly
 POKY_BBLAYERS_CONF_VERSION = "2"
@@ -180,30 +199,34 @@ BBPATH = "\${TOPDIR}"
 BBFILES ?= ""
 
 BBLAYERS ?= " \
-  ${TEMP_DIR}/poky/meta \
-  ${TEMP_DIR}/poky/meta-poky \
-  ${TEMP_DIR}/poky/meta-yocto-bsp \
-  ${TEMP_DIR}/poky/meta-openembedded/meta-oe \
-  ${TEMP_DIR}/poky/meta-openembedded/meta-multimedia \
-  ${TEMP_DIR}/poky/meta-openembedded/meta-networking \
-  ${TEMP_DIR}/poky/meta-openembedded/meta-python \
-  ${TEMP_DIR}/poky/meta-raspberrypi \
+  ${YOCTO_TEMP_DIR}/poky/meta \
+  ${YOCTO_TEMP_DIR}/poky/meta-poky \
+  ${YOCTO_TEMP_DIR}/poky/meta-yocto-bsp \
+  ${YOCTO_TEMP_DIR}/poky/meta-openembedded/meta-oe \
+  ${YOCTO_TEMP_DIR}/poky/meta-openembedded/meta-multimedia \
+  ${YOCTO_TEMP_DIR}/poky/meta-openembedded/meta-networking \
+  ${YOCTO_TEMP_DIR}/poky/meta-openembedded/meta-python \
+  ${YOCTO_TEMP_DIR}/poky/meta-raspberrypi \
   "
 
 BBLAYERS_NON_REMOVABLE ?= " \
-  ${TEMP_DIR}/poky/meta \
-  ${TEMP_DIR}/poky/meta-poky \
+  ${YOCTO_TEMP_DIR}/poky/meta \
+  ${YOCTO_TEMP_DIR}/poky/meta-poky \
   "
 
 EOF
 
-#Append local.conf
-cat << EOF >> "${TEMP_DIR}"/rpi/build/conf/local.conf || _die "Failed to append ${TEMP_DIR}/rpi/build/conf/local.conf"
-MACHINE ??= "${TARGET}"
-EOF
+#Quick hack that if we're totally honest, probably won't be fixed
+#I was having problems preserving env variables across su (and yeah I know there's a param that SHOULD allow this)
+echo "${YOCTO_TEMP_DIR}" > /tmp/YOCTO_TEMP_DIR || _die "Failed to write to file"
+echo "${YOCTO_TARGET}" > /tmp/YOCTO_TARGET || _die "Failed to write to file"
 
-_debug "Building image. Additional images can be found in ${TEMP_DIR}/meta*/recipes*/images/*.bb"
-bitbake rpi-hwup-image || _die "Failed to build image"
-_success "The image can be found in the following directory: ${TEMP_DIR}/rpi/build/tmp/deploy/images/${TARGET}/rpi-basic-image-${TARGET}.rpi-sdimg"
+_debug "Building image. Additional images can be found in ${YOCTO_TEMP_DIR}/meta*/recipes*/images/*.bb"
+sudo su "${YOCTO_BUILD_USER}" -p -c '\
+    source "$(cat /tmp/YOCTO_TEMP_DIR)"/poky/oe-init-build-env "$(cat /tmp/YOCTO_TEMP_DIR)"/rpi/build && \
+    echo MACHINE ??= \"$(cat /tmp/YOCTO_TARGET)\" >> "$(cat /tmp/YOCTO_TEMP_DIR)"/rpi/build/conf/local.conf && \
+    cat "$(cat /tmp/YOCTO_TEMP_DIR)"/rpi/build/conf/local.conf && bitbake rpi-basic-image' || {
+        _die "Failed to build image"
+}
 
-
+_success "The image can be found in the following directory: ${YOCTO_TEMP_DIR}/rpi/build/tmp/deploy/images/${TARGET}/rpi-basic-image-${YOCTO_TARGET}.rpi-sdimg"
