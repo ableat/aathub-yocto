@@ -12,10 +12,20 @@
 
 ## How to use
 
+### Simple
+
 Kick off the build process with the following command:
 ```
-./bootstrap.sh -v
+./bootstrap.sh
 ```
+
+### Advanced
+
+```
+./bootstrap.sh -v -u bender -b /path/to/directory
+```
+
+`bender` *is an arbitrary user. the name doesn't matter*
 
 <br>
 
@@ -26,6 +36,6 @@ For assistance run the following command:
 
 ## Things to consider
 
-The build takes 4+ hours (depending on the machine) to complete, and requires upwards of 80GB of space.
+The build takes 4+ hours (depending on the machine) to complete, and requires upwards of 50GB of space.
 
 This has been sucessfully tested on ubuntu/debian and fedora.
