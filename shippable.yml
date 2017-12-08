@@ -7,6 +7,9 @@ branches:
   only:
     - master
 
+env:
+  - secure: r3U46P40fIXEbpmbMIMPvdCGlufOTRDnX4Diu8r2eMdbyEcuZJEOxfMUqsvUkytcpYzwHTphEqS3dLom5nrWXsNxbRseBafjKqcSThiVkxN4BU1mrM5nEAbfSS0RG89/pzDHlKDJfdVZHhKYUdlli1ZgnIhD2idayTo7DImgqkhVHr6lQlZBQiRc5tJzRMN/GubrULgV4a/e1QoACwoFai84SFMnLTLsL/mmo5CmLf4JUV9UNSo6ev4PsDD/N2g6t8QYgM7UsP8UnLd3b+Cw3+jHMjSr8CzLO+Gemv6ePzy1ALe2TrOKh8pYSxR8/MjcuP/0ESbtkZo5Ou6VWo7I2Q==
+
 build:
   ci:
     - ./bootstrap.sh -v -u morty
