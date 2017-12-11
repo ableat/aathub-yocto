@@ -2,16 +2,26 @@
 
 #Defaults
 VERBOSE=0
+UPLOAD=0
 RELEASE="pyro"
 BASE_PATH="/tmp"
 YOCTO_TARGET="raspberrypi3"
 YOCTO_BUILD_USER=$(whoami)
+BITBAKE_RECIPE="rpi-basic-image"
+S3_BUCKET="s3://build.s3.aatlive.net"
+GIT_REPO_NAME=$(basename $(git rev-parse --show-toplevel))
+GIT_REPO_BRANCH=$(git branch 2>/dev/null | grep '^*' | colrm 1 2)
+GIT_COMMIT_HASH=$(git rev-parse --short HEAD)
 
 RED="\033[0;31m"
 GREEN="\033[32m"
 YELLOW="\033[33m"
 CYAN="\033[36m"
 NC="\033[0m" #No color
+
+#The following variables are defined in shippable.yml
+#  - AWS_ACCESS_KEY: The AWS IAM public key
+#  - AWS_SECRET_KEY: The AWS IAM private key
 
 _log() {
     echo -e ${0##*/}: "${@}" 1>&2
@@ -110,30 +120,36 @@ dnf_dependencies=(
 _usage() {
     cat << EOF
 
-${0##*/} [-h] [-v] [-r string] [-b path/to/directory] [-t string] -- setup yocto and compile target image
+${0##*/} [-h] [-s] [-v] [-r string] [-p string] [-b path/to/directory] [-t string] -- setup yocto and compile/upload image
 where:
     -h  show this help text
     -r  set yocto project release (default: pyro)
     -b  set path for temporary files (default: /tmp)
     -t  set target (default: raspberrypi3)
+    -p  set bitbake recipe (default: rpi-basic-image)
     -u  set yocto build user
     -v  verbose output
+    -s  upload results to S3
 
 EOF
 }
 
-while getopts ':h :v r: t: b: u:' option; do
+while getopts ':h :v r: t: b: u: p:' option; do
     case "${option}" in
         h|\?) _usage
            exit 0
               ;;
         v) VERBOSE=1
            ;;
+        s) UPLOAD=1
+           ;;
         r) RELEASE="${OPTARG}"
            ;;
         b) BASE_PATH="${OPTARG}"
            ;;
         t) TARGET="${OPTARG}"
+           ;;
+        p) BITBAKE_RECIPE="${OPTARG}"
            ;;
         u) YOCTO_BUILD_USER="${OPTARG}"
            ;;
@@ -220,15 +236,32 @@ EOF
 
 #Quick hack that if we're totally honest, probably won't be fixed
 #I was having problems preserving env variables across su (and yeah I know there's a param that SHOULD allow this)
-echo "${YOCTO_TEMP_DIR}" > /tmp/YOCTO_TEMP_DIR || _die "Failed to write to file"
-echo "${YOCTO_TARGET}" > /tmp/YOCTO_TARGET || _die "Failed to write to file"
+echo "${YOCTO_TEMP_DIR}" > /tmp/env/YOCTO_TEMP_DIR || _die "Failed to write to file"
+echo "${YOCTO_TARGET}" > /tmp/env/YOCTO_TARGET || _die "Failed to write to file"
 
 _debug "Building image. Additional images can be found in ${YOCTO_TEMP_DIR}/meta*/recipes*/images/*.bb"
 sudo su "${YOCTO_BUILD_USER}" -p -c '\
-    source "$(cat /tmp/YOCTO_TEMP_DIR)"/poky/oe-init-build-env "$(cat /tmp/YOCTO_TEMP_DIR)"/rpi/build && \
-    echo MACHINE ??= \"$(cat /tmp/YOCTO_TARGET)\" >> "$(cat /tmp/YOCTO_TEMP_DIR)"/rpi/build/conf/local.conf && \
-    cat "$(cat /tmp/YOCTO_TEMP_DIR)"/rpi/build/conf/local.conf && bitbake rpi-basic-image' || {
+    source "$(cat /tmp/env/YOCTO_TEMP_DIR)"/poky/oe-init-build-env "$(cat /tmp/env/YOCTO_TEMP_DIR)"/rpi/build && \
+    echo MACHINE ??= \"$(cat /tmp/env/YOCTO_TARGET)\" >> "$(cat /tmp/env/YOCTO_TEMP_DIR)"/rpi/build/conf/local.conf && \
+    bitbake "${BITBAKE_RECIPE}"' || {
         _die "Failed to build image"
+    }
+
+_success "The image was successfully compiled ヽ(´▽`)/ "
+
+YOCTO_RESULTS_DIR="${YOCTO_TEMP_DIR}/rpi/build/tmp/deploy/images/${TARGET}"
+
+function s3cmd() {
+    s3cmd --access_key="${AWS_ACCESS_KEY}" --secret_key="${AWS_SECRET_KEY}" "$@"
 }
 
-_success "The image can be found in the following directory: ${YOCTO_TEMP_DIR}/rpi/build/tmp/deploy/images/${TARGET}/rpi-basic-image-${YOCTO_TARGET}.rpi-sdimg"
+if [ "${UPLOAD}" -eq 1 ]; then
+    UPLOAD_TIME=$(date +%s)
+    S3_BUCKET_PATH="${GIT_REPO_NAME}"/"${UPLOAD_TIME}"-"${GIT_COMMIT_HASH}"-"${GIT_REPO_BRANCH}"
+
+    files=("${YOCTO_RESULTS_DIR}"/*)
+    for file in ${files[@]}; do
+        s3cmd put --acl-private "${file}" "${S3_BUCKET}"/"${S3_BUCKET_PATH}"/$(basename "${file}") || _die "Failed to upload file: ${file}"
+    done
+    unset files
+fi
