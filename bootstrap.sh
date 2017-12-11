@@ -134,7 +134,7 @@ where:
 EOF
 }
 
-while getopts ':h :v r: t: b: u: p:' option; do
+while getopts ':h :v :s r: t: b: u: p:' option; do
     case "${option}" in
         h|\?) _usage
            exit 0
