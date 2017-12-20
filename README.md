@@ -7,7 +7,18 @@
 
 <h4 align="center">A build system without any of the bullshit</h4>
 
+<p align="center">
+  <a href="https://app.shippable.com/github/ableat/aathub-yocto">
+    <img src="https://api.shippable.com/projects/59e7522854c135070007087a/badge?branch=master"
+         alt="Status">
+  </a>
+</p>
+
 <br>
+
+## Synopsis
+
+Setups a development environment, compiles a [yocto](https://www.yoctoproject.org/)-based image, and optionally uploads the results to [S3](https://aws.amazon.com/s3/).
 
 
 ## How to use
@@ -21,21 +32,28 @@ Kick off the build process with the following command:
 
 ### Advanced
 
+Sourcing `bootstrap.sh` is only necessary if passing in the `-s` param.
+
 ```
-./bootstrap.sh -v -u bender -b /path/to/directory
+. ./bootstrap.sh -v -s -u bender -b /path/to/directory
 ```
 
-`bender` *is an arbitrary user. the name doesn't matter*
+Here's a breakdown:
+
+- `-v` enable verbose output
+- `-s` upload compiled results to S3
+- `-u bender` is an arbitrary user, used to execute `bitbake`. If the user doesn't exist one is created
+- `-b /path/to/directory` parent directory where compilation occurs (the default is `/tmp`)
 
 <br>
 
-For assistance run the following command:
+For the most up-to-date instructions run the following command:
 ```
 ./bootstrap.sh -h
 ```
 
 ## Things to consider
 
-The build takes 4+ hours (depending on the machine) to complete, and requires upwards of 50GB of space.
+The build takes 2 hours to compile on a `c4.2xlarge`, and requires upwards of 50GB of free space.
 
 This has been sucessfully tested on ubuntu/debian and fedora.

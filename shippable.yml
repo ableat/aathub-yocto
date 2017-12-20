@@ -3,13 +3,31 @@ language: node_js
 node_js:
   - "8.8.0"
 
-branches:
-  only:
-    - master
-
 env:
   - secure: r3U46P40fIXEbpmbMIMPvdCGlufOTRDnX4Diu8r2eMdbyEcuZJEOxfMUqsvUkytcpYzwHTphEqS3dLom5nrWXsNxbRseBafjKqcSThiVkxN4BU1mrM5nEAbfSS0RG89/pzDHlKDJfdVZHhKYUdlli1ZgnIhD2idayTo7DImgqkhVHr6lQlZBQiRc5tJzRMN/GubrULgV4a/e1QoACwoFai84SFMnLTLsL/mmo5CmLf4JUV9UNSo6ev4PsDD/N2g6t8QYgM7UsP8UnLd3b+Cw3+jHMjSr8CzLO+Gemv6ePzy1ALe2TrOKh8pYSxR8/MjcuP/0ESbtkZo5Ou6VWo7I2Q==
 
 build:
   ci:
-    - ./bootstrap.sh -v -u morty
+    - df -h
+    - docker images
+    - docker rmi drydock/u14pytall:prod drydock/u14pytpls:prod drydock/u14pyt:prod || true
+    - docker rmi drydock/u12pytall:prod drydock/u12pytpls:prod drydock/u12pyt:prod || true
+    - docker rmi drydock/u14cloall:prod drydock/u14clopls:prod drydock/u14clo:prod || true
+    - docker rmi drydock/u12cloall:prod drydock/u12clopls:prod drydock/u12clo:prod || true
+    - docker rmi drydock/u14golall:prod drydock/u14golpls:prod drydock/u14gol:prod || true
+    - docker rmi drydock/u12golall:prod drydock/u12golpls:prod drydock/u12gol:prod || true
+    - docker rmi drydock/u14javall:prod drydock/u14javpls:prod drydock/u14jav:prod || true
+    - docker rmi drydock/u12javall:prod drydock/u12javpls:prod drydock/u12jav:prod || true
+    - docker rmi drydock/u14scaall:prod drydock/u14scapls:prod drydock/u14sca:prod || true
+    - docker rmi drydock/u12scaall:prod drydock/u12scapls:prod drydock/u12sca:prod || true
+    - docker rmi drydock/u14ruball:prod drydock/u14rubpls:prod drydock/u14rub:prod || true
+    - docker rmi drydock/u12ruball:prod drydock/u12rubpls:prod drydock/u12rub:prod || true
+    - docker rmi drydock/u14phpall:prod drydock/u14phppls:prod drydock/u14php:prod || true
+    - docker rmi drydock/u12phpall:prod drydock/u12phppls:prod drydock/u12php:prod || true
+    - docker rmi drydock/u14cpp:prod drydock/u12cpp:prod || true
+    - docker rmi drydock/u12nodall:prod drydock/u12nod:prod drydock/u12nodpls:prod || true
+    - docker rmi drydock/u12all:prod drydock/u12pls:prod drydock/u12:prod || true
+    - docker rmi shippable/minv2:latest || true
+    - docker images
+    - df -h
+    - . ./bootstrap.sh -v -s -u morty
