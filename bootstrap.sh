@@ -6,12 +6,17 @@ UPLOAD=0
 RELEASE="pyro"
 BASE_PATH="/tmp"
 YOCTO_TARGET="raspberrypi3"
+CURRENT_WORKING_DIR=$(pwd)
 YOCTO_BUILD_USER=$(whoami)
+YOCTO_TEMP_DIR=""
+YOCTO_RESULTS_DIR=""
 BITBAKE_RECIPE="rpi-basic-image"
-S3_BUCKET="s3://build.s3.aatlive.net"
-GIT_REPO_NAME=$(basename $(git rev-parse --show-toplevel))
-GIT_REPO_BRANCH=$(git branch 2>/dev/null | grep '^*' | colrm 1 2)
-GIT_COMMIT_HASH=$(git rev-parse --short HEAD)
+AWS_S3_BUCKET="s3://build.s3.aatlive.net"
+GIT_REPO_NAME=""
+GIT_REPO_BRANCH=""
+GIT_COMMIT_HASH=""
+S3CMD_DOWNLOAD_CHECKSUM="d7477e7000a98552932d23e279d69a11"
+S3CMD_DOWNLOAD_URL="http://ufpr.dl.sourceforge.net/project/s3tools/s3cmd/1.6.1/s3cmd-1.6.1.tar.gz"
 
 RED="\033[0;31m"
 GREEN="\033[32m"
@@ -46,8 +51,28 @@ _die() {
     _cleanup
     exit 1
 }
+
 _cleanup() {
     rm -rf ${TEMP_DIR}
+}
+
+_install_s3cmd() {
+    #Install s3cmd manually as the version in the apt repository is terribly out-of-date
+    _debug "Installing s3cmd manually..."
+    wget -P "${YOCTO_TEMP_DIR}" "${S3CMD_DOWNLOAD_URL}" || _die "Failed to download s3cmd"
+
+    S3CMD_DOWNLOAD_NAME=$(basename "${S3CMD_DOWNLOAD_URL}")
+    S3CMD_DOWNLOAD_PATH="${YOCTO_TEMP_DIR}"/"${S3CMD_DOWNLOAD_NAME}"
+
+    #Validate download integrity before proceeding...
+    S3CMD_DOWNLOAD_CHECKSUM_ACTUAL=$( md5sum "${S3CMD_DOWNLOAD_PATH}" | cut -d' ' -f1 )
+    [ "${S3CMD_DOWNLOAD_CHECKSUM}" != "${S3CMD_DOWNLOAD_CHECKSUM_ACTUAL}" ] && _die "Checksum does not match!"
+
+    tar xzf "${S3CMD_DOWNLOAD_PATH}" -C "${YOCTO_TEMP_DIR}" || _die "Failed to uncompress s3cmd download"
+    pip install setuptools
+    cd "${YOCTO_TEMP_DIR}"/$(basename "${S3CMD_DOWNLOAD_NAME}" .tar.gz)
+    sudo python setup.py install || _die "Failed to install s3cmd"
+    cd "${CURRENT_WORKING_DIR}"
 }
 
 #Check if the script is ran with elevated permissions
@@ -76,7 +101,7 @@ apt_dependencies=(
     "iputils-ping"
     "libsdl1.2-dev"
     "xterm"
-    "s3cmd"
+    "python-pip"
 )
 dnf_dependencies=(
     "gawk"
@@ -114,7 +139,6 @@ dnf_dependencies=(
     "xz"
     "SDL-devel"
     "xterm"
-    "s3cmd"
 )
 
 _usage() {
@@ -160,6 +184,14 @@ while getopts ':h :v :s r: t: b: u: p:' option; do
     esac
 done
 shift $((OPTIND - 1))
+
+GIT_REPO_NAME=$(basename $(git rev-parse --show-toplevel))
+GIT_REPO_BRANCH=$(git branch 2>/dev/null | grep '^*' | cut -d' ' -f2)
+GIT_COMMIT_HASH=$(git rev-parse --short HEAD)
+
+_debug "repo name: ${GIT_REPO_NAME}"
+_debug "repo branch: ${GIT_REPO_BRANCH}"
+_debug "commit hash: ${GIT_COMMIT_HASH}"
 
 _debug "Checking if build user: ${YOCTO_BUILD_USER} exists..."
 if [ $(id -u "${YOCTO_BUILD_USER}" 2>/dev/null || echo -1) -ge 0 ]; then
@@ -236,32 +268,49 @@ EOF
 
 #Quick hack that if we're totally honest, probably won't be fixed
 #I was having problems preserving env variables across su (and yeah I know there's a param that SHOULD allow this)
-echo "${YOCTO_TEMP_DIR}" > /tmp/env/YOCTO_TEMP_DIR || _die "Failed to write to file"
-echo "${YOCTO_TARGET}" > /tmp/env/YOCTO_TARGET || _die "Failed to write to file"
+mkdir -p /tmp/env
+variables=(
+    "YOCTO_TEMP_DIR"
+    "YOCTO_TARGET"
+    "BITBAKE_RECIPE"
+)
+for var in ${variables[@]}; do
+    if [ -z $(eval echo \$$var) ]; then
+        _die "One or more variables is not valid. Only reference variables that are defined."
+    fi
+
+    echo $(eval echo \$$var) > /tmp/env/"${var}" || _die "Failed to write to file."
+done
 
 _debug "Building image. Additional images can be found in ${YOCTO_TEMP_DIR}/meta*/recipes*/images/*.bb"
 sudo su "${YOCTO_BUILD_USER}" -p -c '\
-    source "$(cat /tmp/env/YOCTO_TEMP_DIR)"/poky/oe-init-build-env "$(cat /tmp/env/YOCTO_TEMP_DIR)"/rpi/build && \
-    echo MACHINE ??= \"$(cat /tmp/env/YOCTO_TARGET)\" >> "$(cat /tmp/env/YOCTO_TEMP_DIR)"/rpi/build/conf/local.conf && \
+    YOCTO_TEMP_DIR="$(cat /tmp/env/YOCTO_TEMP_DIR)" && \
+    YOCTO_TARGET="$(cat /tmp/env/YOCTO_TARGET)" && \
+    BITBAKE_RECIPE="$(cat /tmp/env/BITBAKE_RECIPE)" && \
+
+    source "${YOCTO_TEMP_DIR}"/poky/oe-init-build-env "${YOCTO_TEMP_DIR}"/rpi/build && \
+    echo MACHINE ??= \"${YOCTO_TARGET}\" >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
     bitbake "${BITBAKE_RECIPE}"' || {
-        _die "Failed to build image"
+        _die "Failed to build image."
     }
 
-_success "The image was successfully compiled ヽ(´▽`)/ "
+_success "The image was successfully compiled ♥‿♥"
 
-YOCTO_RESULTS_DIR="${YOCTO_TEMP_DIR}/rpi/build/tmp/deploy/images/${TARGET}"
-
-function s3cmd() {
-    s3cmd --access_key="${AWS_ACCESS_KEY}" --secret_key="${AWS_SECRET_KEY}" "$@"
-}
+YOCTO_RESULTS_DIR="${YOCTO_TEMP_DIR}/rpi/build/tmp/deploy/images/${YOCTO_TARGET}"
 
 if [ "${UPLOAD}" -eq 1 ]; then
-    UPLOAD_TIME=$(date +%s)
-    S3_BUCKET_PATH="${GIT_REPO_NAME}"/"${UPLOAD_TIME}"-"${GIT_COMMIT_HASH}"-"${GIT_REPO_BRANCH}"
+    if [ -z "${AWS_ACCESS_KEY}" -o -z "${AWS_SECRET_KEY}" ]; then
+        _die "One or more environmental variables are not set."
+    fi
 
-    files=("${YOCTO_RESULTS_DIR}"/*)
-    for file in ${files[@]}; do
-        s3cmd put --acl-private "${file}" "${S3_BUCKET}"/"${S3_BUCKET_PATH}"/$(basename "${file}") || _die "Failed to upload file: ${file}"
-    done
-    unset files
+    #TODO check s3cmd version
+    command -v s3cmd >/dev/null 2>&1 || _install_s3cmd
+
+    _debug "$(s3cmd --version)"
+    _debug "Uploading results to ${AWS_S3_BUCKET}"
+    UPLOAD_TIME=$(date +%s)
+    AWS_S3_BUCKET_PATH=Images/"${GIT_REPO_NAME}"/"${UPLOAD_TIME}"-"${GIT_COMMIT_HASH}"-"${GIT_REPO_BRANCH}"
+
+    destination="${AWS_S3_BUCKET}"/"${AWS_S3_BUCKET_PATH}"/
+    s3cmd put --acl-private --recursive --access_key="${AWS_ACCESS_KEY}" --secret_key="${AWS_SECRET_KEY}" "${YOCTO_RESULTS_DIR}" "${destination}" || _die "Failed to upload file: ${path}"
 fi
