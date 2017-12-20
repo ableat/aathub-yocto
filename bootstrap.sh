@@ -300,7 +300,9 @@ YOCTO_RESULTS_DIR="${YOCTO_TEMP_DIR}/rpi/build/tmp/deploy/images/${YOCTO_TARGET}
 
 if [ "${UPLOAD}" -eq 1 ]; then
     if [ -z "${AWS_ACCESS_KEY}" -o -z "${AWS_SECRET_KEY}" ]; then
-        _die "One or more environmental variables are not set."
+        if [ $(ls "${HOME}"/.s3cfg* | head -c1 | wc -c) -eq 0 ]; then
+            _die "One or more environmental variables are not set."
+        fi
     fi
 
     #TODO check s3cmd version
