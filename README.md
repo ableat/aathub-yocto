@@ -57,3 +57,5 @@ For the most up-to-date instructions run the following command:
 The build takes 2 hours to compile on a `c4.2xlarge`, and requires upwards of 50GB of free space.
 
 This has been sucessfully tested on ubuntu/debian and fedora.
+
+We base64 the pgp private key used in shippable's secure variable. Use the following command `base64 -w 0 infrastructure.private.asc`
