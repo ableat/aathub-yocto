@@ -99,7 +99,7 @@ _compare_versions () {
 }
 
 #Check if the script is ran with elevated permissions
-if [[ "${EUID}" -eq 1 ]]; then
+if [ "${EUID}" -eq 1 ]; then
     _die "${0##*/} should not be ran as sudo"
 fi
 
@@ -229,13 +229,6 @@ else
     sudo useradd "${YOCTO_BUILD_USER}" || _die "Failed to create user: ${YOCTO_BUILD_USER}"
     sudo passwd -d "${YOCTO_BUILD_USER}" || _die "Failed to delete password for user: ${YOCTO_BUILD_USER}"
     sudo usermod -aG sudo "${YOCTO_BUILD_USER}" || _die "Failed to add user: "${YOCTO_BUILD_USER}" to group: sudo"
-
-    #Only append line if it's absent from the file
-    line="${YOCTO_BUILD_USER} ALL=(ALL) NOPASSWD: ALL"
-    if [ grep -Fxq "${line}" /etc/sudoers ]; then
-        sudo echo "${line}" >> /etc/sudoers
-    fi
-    unset line
 fi
 
 _debug "Installing package dependencies..."
@@ -251,7 +244,7 @@ fi
 command -v apt-get >/dev/null 2>&1 && sudo apt-get update -y && sudo apt-get install -y "${apt_dependencies[@]}"
 
 if [ -z "${PGP_PRIVATE_KEY_BASE64}" ]; then
-    if [[ $(gpg --list-keys "${PGP_EMAIL}" ) ]]; then
+    if [ $(gpg --list-keys "${PGP_EMAIL}" ) ]; then
         _debug "Hell yeah, the gpg private keys is already imported"
     else
         _die "PGP_PRIVATE_KEY_BASE64 is undefined and the private key hasnt been previously imported"
@@ -259,14 +252,14 @@ if [ -z "${PGP_PRIVATE_KEY_BASE64}" ]; then
 else
     _debug "Importing pgp private key..."
     echo "${PGP_PRIVATE_KEY_BASE64}" > infrastructure.private.asc.base64
-    cat infrastructure.private.asc.base64 | base64 --decode > infrastructure.private.asc
+    cat infrastructure.private.asc.base64 | base64 --decode > infrastructure.private.asc || _die "Failed to decode base64 file."
     gpg --import infrastructure.private.asc || _die "Failed to import private pgp key."
-    rm infrastructure.private.asc*
+    rm infrastructure.private.asc* || _die "Failed to remove file."
 fi
 
 #Check if directory doesn't exist
 if [ ! -d "${BASE_PATH}" ]; then
-    _die "Directory ${BASE_PATH} does not exist!"
+    _die "Directory: ${BASE_PATH} does not exist!"
 fi
 
 YOCTO_TEMP_DIR=$(mktemp -t yocto.XXXXXXXX -p "${BASE_PATH}" --directory --dry-run) #There are better ways of doing this.
@@ -378,4 +371,5 @@ if [ "${UPLOAD}" -eq 1 ]; then
 
     destination="${AWS_S3_BUCKET}"/"${AWS_S3_BUCKET_PATH}"/
     s3cmd put --acl-private --recursive --access_key="${AWS_ACCESS_KEY}" --secret_key="${AWS_SECRET_KEY}" "${YOCTO_RESULTS_DIR}" "${destination}" || _die "Failed to upload file: ${path}"
+    unset destination
 fi
