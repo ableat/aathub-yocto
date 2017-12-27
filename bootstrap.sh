@@ -18,6 +18,7 @@ GIT_REPO_BRANCH=""
 GIT_COMMIT_HASH=""
 S3CMD_DOWNLOAD_CHECKSUM="d7477e7000a98552932d23e279d69a11"
 S3CMD_DOWNLOAD_URL="http://ufpr.dl.sourceforge.net/project/s3tools/s3cmd/1.6.1/s3cmd-1.6.1.tar.gz"
+S3CMD_VERSION_MINIMUM="1.6.1"
 PGP_EMAIL="infrastructure@ableat.com"
 
 RED="\033[0;31m"
@@ -76,6 +77,24 @@ _install_s3cmd() {
     cd "${YOCTO_TEMP_DIR}"/$(basename "${S3CMD_DOWNLOAD_NAME}" .tar.gz)
     sudo python setup.py install || _die "Failed to install s3cmd"
     cd "${CURRENT_WORKING_DIR}"
+}
+
+function _compare_versions () {
+    if [ ! -z $3 ]; then
+        _die  "More than two arguments were passed in!"
+    fi
+
+    if [ $1 = $2 ]; then
+        echo 0 && return
+    fi
+
+    if [[ $2 = $(echo $@ | tr " " "\n" | sort -V | head -n1) ]]; then
+        echo 1 && return
+    fi
+
+    if [[ $1 = $(echo $@ | tr " " "\n" | sort -V | head -n1) ]]; then
+        echo -1 && return
+    fi
 }
 
 #Check if the script is ran with elevated permissions
@@ -342,8 +361,14 @@ if [ "${UPLOAD}" -eq 1 ]; then
         fi
     fi
 
-    #TODO check s3cmd version
-    command -v s3cmd >/dev/null 2>&1 || _install_s3cmd
+    if [ $(command -v s3cmd) ]; then
+        S3CMD_VERSION_ACTUAL=$(s3cmd --version | cut -d' ' -f1)
+        if [[  $(_compare_versions "${S3CMD_VERSION_MINIMUM}" "${S3CMD_VERSION_ACTUAL}") -eq 1 ]]; then
+            _die "The s3cmd version doesn't meet the minimum requirements. Please install version "${S3CMD_VERSION_MINIMUM}" or greater."
+        fi
+    else
+        _install_s3cmd
+    fi
 
     _debug "$(s3cmd --version)"
     _debug "Uploading results to ${AWS_S3_BUCKET}"
