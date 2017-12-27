@@ -13,12 +13,15 @@ YOCTO_TEMP_DIR=""
 YOCTO_RESULTS_DIR=""
 BITBAKE_RECIPE="rpi-basic-image"
 AWS_S3_BUCKET="s3://build.s3.aatlive.net"
+AWS_S3_BUCKET_PATH=""
 GIT_REPO_NAME=""
 GIT_REPO_BRANCH=""
 GIT_COMMIT_HASH=""
 S3CMD_DOWNLOAD_CHECKSUM="d7477e7000a98552932d23e279d69a11"
 S3CMD_DOWNLOAD_URL="http://ufpr.dl.sourceforge.net/project/s3tools/s3cmd/1.6.1/s3cmd-1.6.1.tar.gz"
-PGP_EMAIL="infrastructure@ableat.com"
+S3CMD_VERSION_MINIMUM="1.6.1"
+S3CMD_VERSION_ACTUAL=""
+PGP_EMAIL=""
 
 RED="\033[0;31m"
 GREEN="\033[32m"
@@ -78,8 +81,26 @@ _install_s3cmd() {
     cd "${CURRENT_WORKING_DIR}"
 }
 
+_compare_versions () {
+    if [ ! -z $3 ]; then
+        _die  "More than two arguments were passed in!"
+    fi
+
+    if [ $1 = $2 ]; then
+        echo 0 && return
+    fi
+
+    if [[ $2 = $(echo $@ | tr " " "\n" | sort -V | head -n1) ]]; then
+        echo 1 && return
+    fi
+
+    if [[ $1 = $(echo $@ | tr " " "\n" | sort -V | head -n1) ]]; then
+        echo -1 && return
+    fi
+}
+
 #Check if the script is ran with elevated permissions
-if [[ "${EUID}" -eq 1 ]]; then
+if [ "${EUID}" -eq 1 ]; then
     _die "${0##*/} should not be ran as sudo"
 fi
 
@@ -159,12 +180,13 @@ where:
     -u  set yocto build user
     -v  verbose output
     -g  gpg sign sha256sums
+    -e  set pgp email
     -s  upload results to S3
 
 EOF
 }
 
-while getopts ':h :v :s r: t: b: u: p:' option; do
+while getopts ':h :v :s r: t: b: e: u: p:' option; do
     case "${option}" in
         h|\?) _usage
            exit 0
@@ -178,6 +200,8 @@ while getopts ':h :v :s r: t: b: u: p:' option; do
         r) RELEASE="${OPTARG}"
            ;;
         b) BASE_PATH="${OPTARG}"
+           ;;
+        e) PGP_EMAIL="${OPTARG}"
            ;;
         t) TARGET="${OPTARG}"
            ;;
@@ -209,13 +233,6 @@ else
     sudo useradd "${YOCTO_BUILD_USER}" || _die "Failed to create user: ${YOCTO_BUILD_USER}"
     sudo passwd -d "${YOCTO_BUILD_USER}" || _die "Failed to delete password for user: ${YOCTO_BUILD_USER}"
     sudo usermod -aG sudo "${YOCTO_BUILD_USER}" || _die "Failed to add user: "${YOCTO_BUILD_USER}" to group: sudo"
-
-    #Only append line if it's absent from the file
-    line="${YOCTO_BUILD_USER} ALL=(ALL) NOPASSWD: ALL"
-    if [ grep -Fxq "${line}" /etc/sudoers ]; then
-        sudo echo "${line}" >> /etc/sudoers
-    fi
-    unset line
 fi
 
 _debug "Installing package dependencies..."
@@ -231,7 +248,7 @@ fi
 command -v apt-get >/dev/null 2>&1 && sudo apt-get update -y && sudo apt-get install -y "${apt_dependencies[@]}"
 
 if [ -z "${PGP_PRIVATE_KEY_BASE64}" ]; then
-    if [[ $(gpg --list-keys "${PGP_EMAIL}" ) ]]; then
+    if [ $(gpg --list-keys "${PGP_EMAIL}" ) ]; then
         _debug "Hell yeah, the gpg private keys is already imported"
     else
         _die "PGP_PRIVATE_KEY_BASE64 is undefined and the private key hasnt been previously imported"
@@ -239,14 +256,14 @@ if [ -z "${PGP_PRIVATE_KEY_BASE64}" ]; then
 else
     _debug "Importing pgp private key..."
     echo "${PGP_PRIVATE_KEY_BASE64}" > infrastructure.private.asc.base64
-    cat infrastructure.private.asc.base64 | base64 --decode > infrastructure.private.asc
+    cat infrastructure.private.asc.base64 | base64 --decode > infrastructure.private.asc || _die "Failed to decode base64 file."
     gpg --import infrastructure.private.asc || _die "Failed to import private pgp key."
-    rm infrastructure.private.asc*
+    rm infrastructure.private.asc* || _die "Failed to remove file."
 fi
 
 #Check if directory doesn't exist
 if [ ! -d "${BASE_PATH}" ]; then
-    _die "Directory ${BASE_PATH} does not exist!"
+    _die "Directory: ${BASE_PATH} does not exist!"
 fi
 
 YOCTO_TEMP_DIR=$(mktemp -t yocto.XXXXXXXX -p "${BASE_PATH}" --directory --dry-run) #There are better ways of doing this.
@@ -330,9 +347,11 @@ YOCTO_RESULTS_EXT3=$(ls "${YOCTO_RESULTS_DIR}"/*.rootfs.rpi-sdimg)
 _debug "Generating sha256sums..."
 echo $(sha256sum "${YOCTO_RESULTS_SDIMG}" "${YOCTO_RESULTS_EXT3}") > "${YOCTO_RESULTS_DIR}"/$(basename "${YOCTO_RESULTS_SDIMG}" .rpi-sdimg).sha256sums || _die "Failed to generate sha256sums."
 
-if [ "${ENABLE_GPG_SIGNING}" -eq 1 ]; then
+if [ "${ENABLE_GPG_SIGNING}" -eq 1 -a -n "${PGP_EMAIL}" ]; then
     _debug "Signing sha256sums..."
     gpg -vv --no-tty -u "${PGP_EMAIL}" --output "${YOCTO_RESULTS_BASENAME}".sha256sums.sig --detach-sig "${YOCTO_RESULTS_BASENAME}".sha256sums || _die "Failed to sign sha256sums."
+else
+    _debug "Skipping gpg signing..."
 fi
 
 if [ "${UPLOAD}" -eq 1 ]; then
@@ -342,8 +361,14 @@ if [ "${UPLOAD}" -eq 1 ]; then
         fi
     fi
 
-    #TODO check s3cmd version
-    command -v s3cmd >/dev/null 2>&1 || _install_s3cmd
+    if [ $(command -v s3cmd) ]; then
+        S3CMD_VERSION_ACTUAL=$(s3cmd --version | cut -d' ' -f1)
+        if [ $(_compare_versions "${S3CMD_VERSION_MINIMUM}" "${S3CMD_VERSION_ACTUAL}") -eq 1 ]; then
+            _die "The s3cmd version doesn't meet the minimum requirements. Please install version "${S3CMD_VERSION_MINIMUM}" or greater."
+        fi
+    else
+        _install_s3cmd
+    fi
 
     _debug "$(s3cmd --version)"
     _debug "Uploading results to ${AWS_S3_BUCKET}"
@@ -351,5 +376,6 @@ if [ "${UPLOAD}" -eq 1 ]; then
     AWS_S3_BUCKET_PATH=Images/"${GIT_REPO_NAME}"/"${UPLOAD_TIME}"-"${GIT_COMMIT_HASH}"-"${GIT_REPO_BRANCH}"
 
     destination="${AWS_S3_BUCKET}"/"${AWS_S3_BUCKET_PATH}"/
-    s3cmd put --acl-private --recursive --access_key="${AWS_ACCESS_KEY}" --secret_key="${AWS_SECRET_KEY}" "${YOCTO_RESULTS_DIR}" "${destination}" || _die "Failed to upload file: ${path}"
+    s3cmd put --acl-private --follow-symlinks --recursive --access_key="${AWS_ACCESS_KEY}" --secret_key="${AWS_SECRET_KEY}" "${YOCTO_RESULTS_DIR}" "${destination}" || _die "Failed to upload file: ${path}"
+    unset destination
 fi
