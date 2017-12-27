@@ -376,6 +376,6 @@ if [ "${UPLOAD}" -eq 1 ]; then
     AWS_S3_BUCKET_PATH=Images/"${GIT_REPO_NAME}"/"${UPLOAD_TIME}"-"${GIT_COMMIT_HASH}"-"${GIT_REPO_BRANCH}"
 
     destination="${AWS_S3_BUCKET}"/"${AWS_S3_BUCKET_PATH}"/
-    s3cmd put --acl-private --recursive --access_key="${AWS_ACCESS_KEY}" --secret_key="${AWS_SECRET_KEY}" "${YOCTO_RESULTS_DIR}" "${destination}" || _die "Failed to upload file: ${path}"
+    s3cmd put --acl-private --follow-symlinks --recursive --access_key="${AWS_ACCESS_KEY}" --secret_key="${AWS_SECRET_KEY}" "${YOCTO_RESULTS_DIR}" "${destination}" || _die "Failed to upload file: ${path}"
     unset destination
 fi
