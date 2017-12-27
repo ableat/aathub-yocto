@@ -3,6 +3,7 @@
 #Defaults
 VERBOSE=0
 UPLOAD=0
+ENABLE_GPG_SIGNING=0
 RELEASE="pyro"
 BASE_PATH="/tmp"
 YOCTO_TARGET="raspberrypi3"
@@ -17,6 +18,7 @@ GIT_REPO_BRANCH=""
 GIT_COMMIT_HASH=""
 S3CMD_DOWNLOAD_CHECKSUM="d7477e7000a98552932d23e279d69a11"
 S3CMD_DOWNLOAD_URL="http://ufpr.dl.sourceforge.net/project/s3tools/s3cmd/1.6.1/s3cmd-1.6.1.tar.gz"
+PGP_EMAIL="infrastructure@ableat.com"
 
 RED="\033[0;31m"
 GREEN="\033[32m"
@@ -27,6 +29,7 @@ NC="\033[0m" #No color
 #The following variables are defined in shippable.yml
 #  - AWS_ACCESS_KEY: The AWS IAM public key
 #  - AWS_SECRET_KEY: The AWS IAM private key
+#  - PGP_PRIVATE_KEY_BASE64: Used to sign sha256sum
 
 _log() {
     echo -e ${0##*/}: "${@}" 1>&2
@@ -102,6 +105,7 @@ apt_dependencies=(
     "libsdl1.2-dev"
     "xterm"
     "python-pip"
+    "gnupg"
 )
 dnf_dependencies=(
     "gawk"
@@ -139,12 +143,13 @@ dnf_dependencies=(
     "xz"
     "SDL-devel"
     "xterm"
+    "gpg2"
 )
 
 _usage() {
     cat << EOF
 
-${0##*/} [-h] [-s] [-v] [-r string] [-p string] [-b path/to/directory] [-t string] -- setup yocto and compile/upload image
+${0##*/} [-h] [-s] [-v] [-g] [-r string] [-p string] [-b path/to/directory] [-t string] -- setup yocto and compile/upload image
 where:
     -h  show this help text
     -r  set yocto project release (default: pyro)
@@ -153,6 +158,7 @@ where:
     -p  set bitbake recipe (default: rpi-basic-image)
     -u  set yocto build user
     -v  verbose output
+    -g  gpg sign sha256sums
     -s  upload results to S3
 
 EOF
@@ -166,6 +172,8 @@ while getopts ':h :v :s r: t: b: u: p:' option; do
         v) VERBOSE=1
            ;;
         s) UPLOAD=1
+           ;;
+        g) ENABLE_GPG_SIGNING=1
            ;;
         r) RELEASE="${OPTARG}"
            ;;
@@ -212,10 +220,29 @@ fi
 
 _debug "Installing package dependencies..."
 #Install fedora dependencies
-command -v dnf >/dev/null 2>&1 && sudo dnf update -y && sudo dnf install -y "${dnf_dependencies[@]}"
+if [ $(command -v dnf) ]; then
+    function gpg () {
+        gpg2 "$@"
+    }
+    sudo dnf update -y && sudo dnf install -y "${dnf_dependencies[@]}"
+fi
 
 #Install ubuntu/debian dependencies
 command -v apt-get >/dev/null 2>&1 && sudo apt-get update -y && sudo apt-get install -y "${apt_dependencies[@]}"
+
+if [ -z "${PGP_PRIVATE_KEY_BASE64}" ]; then
+    if [[ $(gpg --list-keys "${PGP_EMAIL}" ) ]]; then
+        _debug "Hell yeah, the gpg private keys is already imported"
+    else
+        _die "PGP_PRIVATE_KEY_BASE64 is undefined and the private key hasnt been previously imported"
+    fi
+else
+    _debug "Importing pgp private key..."
+    echo "${PGP_PRIVATE_KEY_BASE64}" > infrastructure.private.asc.base64
+    cat infrastructure.private.asc.base64 | base64 --decode > infrastructure.private.asc
+    gpg --import infrastructure.private.asc || _die "Failed to import private pgp key."
+    rm infrastructure.private.asc*
+fi
 
 #Check if directory doesn't exist
 if [ ! -d "${BASE_PATH}" ]; then
@@ -278,7 +305,6 @@ for var in ${variables[@]}; do
     if [ -z $(eval echo \$$var) ]; then
         _die "One or more variables is not valid. Only reference variables that are defined."
     fi
-
     echo $(eval echo \$$var) > /tmp/env/"${var}" || _die "Failed to write to file."
 done
 
@@ -297,6 +323,17 @@ sudo su "${YOCTO_BUILD_USER}" -p -c '\
 _success "The image was successfully compiled ♥‿♥"
 
 YOCTO_RESULTS_DIR="${YOCTO_TEMP_DIR}/rpi/build/tmp/deploy/images/${YOCTO_TARGET}"
+YOCTO_RESULTS_BASENAME=$(basename "${YOCTO_RESULTS_SDIMG}" .rpi-sdimg)
+YOCTO_RESULTS_SDIMG=$(ls "${YOCTO_RESULTS_DIR}"/*.rootfs.ext3)
+YOCTO_RESULTS_EXT3=$(ls "${YOCTO_RESULTS_DIR}"/*.rootfs.rpi-sdimg)
+
+_debug "Generating sha256sums..."
+echo $(sha256sum "${YOCTO_RESULTS_SDIMG}" "${YOCTO_RESULTS_EXT3}") > "${YOCTO_RESULTS_DIR}"/$(basename "${YOCTO_RESULTS_SDIMG}" .rpi-sdimg).sha256sums || _die "Failed to generate sha256sums."
+
+if [ "${ENABLE_GPG_SIGNING}" -eq 1 ]; then
+    _debug "Signing sha256sums..."
+    gpg -vv --no-tty -u "${PGP_EMAIL}" --output "${YOCTO_RESULTS_BASENAME}".sha256sums.sig --detach-sig "${YOCTO_RESULTS_BASENAME}".sha256sums || _die "Failed to sign sha256sums."
+fi
 
 if [ "${UPLOAD}" -eq 1 ]; then
     if [ -z "${AWS_ACCESS_KEY}" -o -z "${AWS_SECRET_KEY}" ]; then
