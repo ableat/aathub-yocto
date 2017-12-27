@@ -30,4 +30,4 @@ build:
     - docker rmi shippable/minv2:latest || true
     - docker images
     - df -h
-    - . ./bootstrap.sh -v -s -u morty
+    - . ./bootstrap.sh -v -s -u morty -e infrastructure@ableat.com

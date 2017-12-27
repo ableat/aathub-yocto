@@ -21,7 +21,7 @@ S3CMD_DOWNLOAD_CHECKSUM="d7477e7000a98552932d23e279d69a11"
 S3CMD_DOWNLOAD_URL="http://ufpr.dl.sourceforge.net/project/s3tools/s3cmd/1.6.1/s3cmd-1.6.1.tar.gz"
 S3CMD_VERSION_MINIMUM="1.6.1"
 S3CMD_VERSION_ACTUAL=""
-PGP_EMAIL="infrastructure@ableat.com"
+PGP_EMAIL=""
 
 RED="\033[0;31m"
 GREEN="\033[32m"
@@ -180,12 +180,13 @@ where:
     -u  set yocto build user
     -v  verbose output
     -g  gpg sign sha256sums
+    -e  set pgp email
     -s  upload results to S3
 
 EOF
 }
 
-while getopts ':h :v :s r: t: b: u: p:' option; do
+while getopts ':h :v :s r: t: b: e: u: p:' option; do
     case "${option}" in
         h|\?) _usage
            exit 0
@@ -199,6 +200,8 @@ while getopts ':h :v :s r: t: b: u: p:' option; do
         r) RELEASE="${OPTARG}"
            ;;
         b) BASE_PATH="${OPTARG}"
+           ;;
+        e) PGP_EMAIL="${OPTARG}"
            ;;
         t) TARGET="${OPTARG}"
            ;;
@@ -344,9 +347,11 @@ YOCTO_RESULTS_EXT3=$(ls "${YOCTO_RESULTS_DIR}"/*.rootfs.rpi-sdimg)
 _debug "Generating sha256sums..."
 echo $(sha256sum "${YOCTO_RESULTS_SDIMG}" "${YOCTO_RESULTS_EXT3}") > "${YOCTO_RESULTS_DIR}"/$(basename "${YOCTO_RESULTS_SDIMG}" .rpi-sdimg).sha256sums || _die "Failed to generate sha256sums."
 
-if [ "${ENABLE_GPG_SIGNING}" -eq 1 ]; then
+if [ "${ENABLE_GPG_SIGNING}" -eq 1 -a -n "${PGP_EMAIL}" ]; then
     _debug "Signing sha256sums..."
     gpg -vv --no-tty -u "${PGP_EMAIL}" --output "${YOCTO_RESULTS_BASENAME}".sha256sums.sig --detach-sig "${YOCTO_RESULTS_BASENAME}".sha256sums || _die "Failed to sign sha256sums."
+else
+    _debug "Skipping gpg signing..."
 fi
 
 if [ "${UPLOAD}" -eq 1 ]; then
