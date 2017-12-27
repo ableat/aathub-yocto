@@ -19,6 +19,7 @@ GIT_COMMIT_HASH=""
 S3CMD_DOWNLOAD_CHECKSUM="d7477e7000a98552932d23e279d69a11"
 S3CMD_DOWNLOAD_URL="http://ufpr.dl.sourceforge.net/project/s3tools/s3cmd/1.6.1/s3cmd-1.6.1.tar.gz"
 S3CMD_VERSION_MINIMUM="1.6.1"
+S3CMD_VERSION_ACTUAL=""
 PGP_EMAIL="infrastructure@ableat.com"
 
 RED="\033[0;31m"
