@@ -80,7 +80,7 @@ _install_s3cmd() {
     cd "${CURRENT_WORKING_DIR}"
 }
 
-function _compare_versions () {
+_compare_versions () {
     if [ ! -z $3 ]; then
         _die  "More than two arguments were passed in!"
     fi
@@ -364,7 +364,7 @@ if [ "${UPLOAD}" -eq 1 ]; then
 
     if [ $(command -v s3cmd) ]; then
         S3CMD_VERSION_ACTUAL=$(s3cmd --version | cut -d' ' -f1)
-        if [[  $(_compare_versions "${S3CMD_VERSION_MINIMUM}" "${S3CMD_VERSION_ACTUAL}") -eq 1 ]]; then
+        if [ $(_compare_versions "${S3CMD_VERSION_MINIMUM}" "${S3CMD_VERSION_ACTUAL}") -eq 1 ]; then
             _die "The s3cmd version doesn't meet the minimum requirements. Please install version "${S3CMD_VERSION_MINIMUM}" or greater."
         fi
     else
