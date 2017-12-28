@@ -320,7 +320,7 @@ variables=(
 )
 for var in ${variables[@]}; do
     if [ -z $(eval echo \$$var) ]; then
-        _die "One or more variables is not valid. Only reference variables that are defined."
+        _die "One or more variables are not valid. Only reference variables that have been previously defined."
     fi
     echo $(eval echo \$$var) > /tmp/env/"${var}" || _die "Failed to write to file."
 done
