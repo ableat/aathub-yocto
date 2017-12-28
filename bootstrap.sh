@@ -101,7 +101,7 @@ _compare_versions () {
 
 #Check if the script is ran with elevated permissions
 if [ "${EUID}" -eq 1 ]; then
-    _die "${0##*/} should not be ran as sudo"
+    _die "${0##*/} should not be ran with sudo"
 fi
 
 apt_dependencies=(
@@ -227,7 +227,7 @@ _debug "commit hash: ${GIT_COMMIT_HASH}"
 
 _debug "Checking if build user: ${YOCTO_BUILD_USER} exists..."
 if [ $(id -u "${YOCTO_BUILD_USER}" 2>/dev/null || echo -1) -ge 0 ]; then
-    _debug "Build user already exists"
+    _debug "Build user already exists. Proceeding..."
 else
     _log "User: ${YOCTO_BUILD_USER} does not exist. Creating..."
     sudo useradd "${YOCTO_BUILD_USER}" || _die "Failed to create user: ${YOCTO_BUILD_USER}"
@@ -334,7 +334,7 @@ sudo su "${YOCTO_BUILD_USER}" -p -c '\
     source "${YOCTO_TEMP_DIR}"/poky/oe-init-build-env "${YOCTO_TEMP_DIR}"/rpi/build && \
     echo MACHINE ??= \"${YOCTO_TARGET}\" >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
     bitbake "${BITBAKE_RECIPE}"' || {
-        _die "Failed to build image."
+        _die "Failed to build image ಥ﹏ಥ"
     }
 
 _success "The image was successfully compiled ♥‿♥"
