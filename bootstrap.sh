@@ -267,12 +267,13 @@ fi
 
 #Check for ssh key
 if [ -z "${SSH_PRIVATE_KEY_BASE64}" ]; then
-    _die "SSH_PRIVATE_KEY_BASE64 is undefined."
+    _debug "SSH_PRIVATE_KEY_BASE64 is undefined."
 else
     _debug "Importing ssh private key..."
     echo "${SSH_PRIVATE_KEY_BASE64}" > infrastructure.private.ssh.base64
     cat infrastructure.private.ssh.base64 | base64 --decode > infrastructure.private.ssh || _die "Failed to decode base64 file."
     mv infrastructure.private.ssh ~/.ssh/id_rsa || _die "Failed to move private ssh key."
+    chmod 400 ~/.ssh/id_rsa
     ssh-add ~/.ssh/id_rsa || _die "Failed to add the ssh key to the ssh-agent."
 fi
 
