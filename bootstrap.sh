@@ -280,6 +280,9 @@ git clone -b "${RELEASE}" git://git.openembedded.org/meta-openembedded "${YOCTO_
 _debug "Cloning meta-raspberrypi..."
 git clone -b "${RELEASE}" git://git.yoctoproject.org/meta-raspberrypi "${YOCTO_TEMP_DIR}"/poky/meta-raspberrypi || _die "Failed to clone meta-raspberrypi repository"
 
+_debug "Cloning meta-aatlive..."
+git clone git@github.com:ableat/meta-aatlive.git "${YOCTO_TEMP_DIR}"/poky/meta-aatlive || _die "Failed to clone meta-aatlive repository"
+
 #Create custom bblayers.conf
 mkdir -p "${YOCTO_TEMP_DIR}"/rpi/build/conf
 sudo chmod -R 777 "${YOCTO_TEMP_DIR}" || _die "Failed to change directory: ${YOCTO_TEMP_DIR} permissions"
@@ -301,6 +304,7 @@ BBLAYERS ?= " \
   ${YOCTO_TEMP_DIR}/poky/meta-openembedded/meta-networking \
   ${YOCTO_TEMP_DIR}/poky/meta-openembedded/meta-python \
   ${YOCTO_TEMP_DIR}/poky/meta-raspberrypi \
+  ${YOCTO_TEMP_DIR}/poky/meta-aatlive \
   "
 
 BBLAYERS_NON_REMOVABLE ?= " \
