@@ -251,7 +251,9 @@ if [ -z "${PGP_PRIVATE_KEY_BASE64}" ]; then
     if [ $(gpg --list-keys "${PGP_EMAIL}" ) ]; then
         _debug "Hell yeah, the gpg private keys is already imported"
     else
-        _die "PGP_PRIVATE_KEY_BASE64 is undefined and the private key hasnt been previously imported"
+        _debug "PGP_PRIVATE_KEY_BASE64 is undefined and the private key hasnt been previously imported"
+        _debug "Disabling GPG signing..."
+        ENABLE_GPG_SIGNING=0
     fi
 else
     _debug "Importing pgp private key..."
@@ -293,7 +295,7 @@ cat << EOF >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/bblayers.conf || _die "Failed t
 POKY_BBLAYERS_CONF_VERSION = "2"
 
 BBPATH = "\${TOPDIR}"
-BBFILES ?= ""
+BBFILES ?= "
 
 BBLAYERS ?= " \
   ${YOCTO_TEMP_DIR}/poky/meta \
