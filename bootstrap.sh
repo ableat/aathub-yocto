@@ -33,6 +33,7 @@ NC="\033[0m" #No color
 #  - AWS_ACCESS_KEY: The AWS IAM public key
 #  - AWS_SECRET_KEY: The AWS IAM private key
 #  - PGP_PRIVATE_KEY_BASE64: Used to sign sha256sum
+#  - SSH_PRIVATE_KEY_BASE64: Used to clone private git repo
 
 _log() {
     echo -e ${0##*/}: "${@}" 1>&2
@@ -247,6 +248,7 @@ fi
 #Install ubuntu/debian dependencies
 command -v apt-get >/dev/null 2>&1 && sudo apt-get update -y && sudo apt-get install -y "${apt_dependencies[@]}"
 
+#Check for pgp key
 if [ -z "${PGP_PRIVATE_KEY_BASE64}" ]; then
     if [ $(gpg --list-keys "${PGP_EMAIL}" ) ]; then
         _debug "Hell yeah, the gpg private keys is already imported"
@@ -261,6 +263,16 @@ else
     cat infrastructure.private.asc.base64 | base64 --decode > infrastructure.private.asc || _die "Failed to decode base64 file."
     gpg --import infrastructure.private.asc || _die "Failed to import private pgp key."
     rm infrastructure.private.asc* || _die "Failed to remove file."
+fi
+
+#Check for ssh key
+if [ -z "${SSH_PRIVATE_KEY_BASE64}" ]; then
+    _die "SSH_PRIVATE_KEY_BASE64 is undefined."
+else
+    _debug "Importing ssh private key..."
+    echo "${PGP_PRIVATE_KEY_BASE64}" > infrastructure.private.ssh.base64
+    cat infrastructure.private.ssh.base64 | base64 --decode > infrastructure.private.ssh || _die "Failed to decode base64 file."
+    mv infrastructure.private.ssh  ~/.ssh/id_rsa || _die "Failed to import private ssh key."
 fi
 
 #Check if directory doesn't exist
