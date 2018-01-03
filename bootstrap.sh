@@ -299,7 +299,8 @@ git clone -b "${RELEASE}" git://git.yoctoproject.org/meta-raspberrypi "${YOCTO_T
 
 _debug "Cloning meta-aatlive..."
 if [ -n "${SSH_PRIVATE_KEY_BASE64}" -a "${CI}" = "true"]; then #CI is an environment variable provided by Shippable
-    ssh-agent $(ssh-add ~/.ssh/id_rsa; git clone -b "${RELEASE}" git@github.com:ableat/meta-aatlive.git "${YOCTO_TEMP_DIR}"/poky/meta-aatlive) || _die "Failed to clone meta-aatlive repository"
+    _debug "Using provided ssh key..."
+    ssh-agent bash -c 'ssh-add ~/.ssh/id_rsa; git clone -b "${RELEASE}" git@github.com:ableat/meta-aatlive.git "${YOCTO_TEMP_DIR}"/poky/meta-aatlive' || _die "Failed to clone meta-aatlive repository"
 else
     git clone -b "${RELEASE}" git@github.com:ableat/meta-aatlive.git "${YOCTO_TEMP_DIR}"/poky/meta-aatlive || _die "Failed to clone meta-aatlive repository"
 fi
