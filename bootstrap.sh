@@ -297,7 +297,7 @@ _debug "Cloning meta-raspberrypi..."
 git clone -b "${RELEASE}" git://git.yoctoproject.org/meta-raspberrypi "${YOCTO_TEMP_DIR}"/poky/meta-raspberrypi || _die "Failed to clone meta-raspberrypi repository"
 
 _debug "Cloning meta-aatlive..."
-git clone git@github.com:ableat/meta-aatlive.git "${YOCTO_TEMP_DIR}"/poky/meta-aatlive || _die "Failed to clone meta-aatlive repository"
+git clone -b "${RELEASE}" git@github.com:ableat/meta-aatlive.git "${YOCTO_TEMP_DIR}"/poky/meta-aatlive || _die "Failed to clone meta-aatlive repository"
 
 #Create custom bblayers.conf
 mkdir -p "${YOCTO_TEMP_DIR}"/rpi/build/conf
