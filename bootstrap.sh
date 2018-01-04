@@ -283,7 +283,7 @@ if [ ! -d "${BASE_PATH}" ]; then
     _die "Directory: ${BASE_PATH} does not exist!"
 fi
 
-YOCTO_TEMP_DIR=$(mktemp -t yocto.XXXXXXXX -p "${BASE_PATH}" --directory --dry-run) #There are better ways of doing this.
+export YOCTO_TEMP_DIR=$(mktemp -t yocto.XXXXXXXX -p "${BASE_PATH}" --directory --dry-run) #There are better ways of doing this.
 
 _debug "Creating temporary directory: ${TEMP_DIR}"
 mkdir "${YOCTO_TEMP_DIR}" || _die "Failed to create temporary directory: ${YOCTO_TEMP_DIR}"
