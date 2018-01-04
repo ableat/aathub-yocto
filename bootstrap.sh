@@ -275,7 +275,6 @@ else
     cat infrastructure.private.ssh.base64 | base64 --decode > infrastructure.private.ssh || _die "Failed to decode base64 file."
     mv infrastructure.private.ssh ~/.ssh/id_rsa || _die "Failed to move private ssh key."
     chmod 600 ~/.ssh/id_rsa || _die "Failed to change file permissions."
-    ssh-add ~/.ssh/id_rsa || _die "Failed to add the ssh key to the ssh-agent."
 fi
 
 #Check if directory doesn't exist
