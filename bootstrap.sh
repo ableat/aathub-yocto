@@ -4,7 +4,6 @@
 VERBOSE=0
 UPLOAD=0
 ENABLE_GPG_SIGNING=0
-RELEASE="pyro"
 BASE_PATH="/tmp"
 YOCTO_TARGET="raspberrypi3"
 CURRENT_WORKING_DIR=$(pwd)
@@ -22,6 +21,8 @@ S3CMD_DOWNLOAD_URL="http://ufpr.dl.sourceforge.net/project/s3tools/s3cmd/1.6.1/s
 S3CMD_VERSION_MINIMUM="1.6.1"
 S3CMD_VERSION_ACTUAL=""
 PGP_EMAIL=""
+
+export YOCTO_RELEASE="pyro"
 
 RED="\033[0;31m"
 GREEN="\033[32m"
@@ -198,7 +199,7 @@ while getopts ':h :v :s r: t: b: e: u: p:' option; do
            ;;
         g) ENABLE_GPG_SIGNING=1
            ;;
-        r) RELEASE="${OPTARG}"
+        r) YOCTO_RELEASE="${OPTARG}"
            ;;
         b) BASE_PATH="${OPTARG}"
            ;;
@@ -287,23 +288,23 @@ YOCTO_TEMP_DIR=$(mktemp -t yocto.XXXXXXXX -p "${BASE_PATH}" --directory --dry-ru
 _debug "Creating temporary directory: ${TEMP_DIR}"
 mkdir "${YOCTO_TEMP_DIR}" || _die "Failed to create temporary directory: ${YOCTO_TEMP_DIR}"
 
-_debug "Yocto Project Release: ${RELEASE}"
+_debug "Yocto Project Release: ${YOCTO_RELEASE}"
 
 _debug "Cloning poky..."
-git clone -b "${RELEASE}" git://git.yoctoproject.org/poky "${YOCTO_TEMP_DIR}"/poky || _die "Failed to clone poky repository"
+git clone -b "${YOCTO_RELEASE}" git://git.yoctoproject.org/poky "${YOCTO_TEMP_DIR}"/poky || _die "Failed to clone poky repository"
 
 _debug "Cloning meta-openembedded..."
-git clone -b "${RELEASE}" git://git.openembedded.org/meta-openembedded "${YOCTO_TEMP_DIR}"/poky/meta-openembedded || _die "Failed to clone meta-openembedded repository"
+git clone -b "${YOCTO_RELEASE}" git://git.openembedded.org/meta-openembedded "${YOCTO_TEMP_DIR}"/poky/meta-openembedded || _die "Failed to clone meta-openembedded repository"
 
 _debug "Cloning meta-raspberrypi..."
-git clone -b "${RELEASE}" git://git.yoctoproject.org/meta-raspberrypi "${YOCTO_TEMP_DIR}"/poky/meta-raspberrypi || _die "Failed to clone meta-raspberrypi repository"
+git clone -b "${YOCTO_RELEASE}" git://git.yoctoproject.org/meta-raspberrypi "${YOCTO_TEMP_DIR}"/poky/meta-raspberrypi || _die "Failed to clone meta-raspberrypi repository"
 
 _debug "Cloning meta-aatlive..."
 if [ -n "${SSH_PRIVATE_KEY_BASE64}" -a "${CI}" = "true" ]; then #CI is an environment variable provided by Shippable
     _debug "Using provided ssh key..."
-    ssh-agent bash -c 'ssh-add ~/.ssh/id_rsa; git clone -b "${RELEASE}" git@github.com:ableat/meta-aatlive.git "${YOCTO_TEMP_DIR}"/poky/meta-aatlive' || _die "Failed to clone meta-aatlive repository"
+    ssh-agent bash -c 'ssh-add ~/.ssh/id_rsa; git clone -b "${YOCTO_RELEASE}" git@github.com:ableat/meta-aatlive.git "${YOCTO_TEMP_DIR}"/poky/meta-aatlive' || _die "Failed to clone meta-aatlive repository"
 else
-    git clone -b "${RELEASE}" git@github.com:ableat/meta-aatlive.git "${YOCTO_TEMP_DIR}"/poky/meta-aatlive || _die "Failed to clone meta-aatlive repository"
+    git clone -b "${YOCTO_RELEASE}" git@github.com:ableat/meta-aatlive.git "${YOCTO_TEMP_DIR}"/poky/meta-aatlive || _die "Failed to clone meta-aatlive repository"
 fi
 
 #Create custom bblayers.conf
