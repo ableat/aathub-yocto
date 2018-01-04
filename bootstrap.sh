@@ -317,7 +317,7 @@ cat << EOF >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/bblayers.conf || _die "Failed t
 POKY_BBLAYERS_CONF_VERSION = "2"
 
 BBPATH = "\${TOPDIR}"
-BBFILES ?= "
+BBFILES ?= ""
 
 BBLAYERS ?= " \
   ${YOCTO_TEMP_DIR}/poky/meta \
