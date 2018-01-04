@@ -33,7 +33,7 @@ NC="\033[0m" #No color
 #  - AWS_ACCESS_KEY: The AWS IAM public key
 #  - AWS_SECRET_KEY: The AWS IAM private key
 #  - PGP_PRIVATE_KEY_BASE64: Used to sign sha256sum
-#  - SSH_PRIVATE_KEY_BASE64: Used to clone private git repo
+#  - SSH_PRIVATE_KEY_BASE64: Used to clone private github repo
 
 _log() {
     echo -e ${0##*/}: "${@}" 1>&2
@@ -286,6 +286,8 @@ YOCTO_TEMP_DIR=$(mktemp -t yocto.XXXXXXXX -p "${BASE_PATH}" --directory --dry-ru
 
 _debug "Creating temporary directory: ${TEMP_DIR}"
 mkdir "${YOCTO_TEMP_DIR}" || _die "Failed to create temporary directory: ${YOCTO_TEMP_DIR}"
+
+_debug "Yocto Project Release: ${RELEASE}"
 
 _debug "Cloning poky..."
 git clone -b "${RELEASE}" git://git.yoctoproject.org/poky "${YOCTO_TEMP_DIR}"/poky || _die "Failed to clone poky repository"
