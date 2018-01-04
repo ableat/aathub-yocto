@@ -302,7 +302,7 @@ git clone -b "${YOCTO_RELEASE}" git://git.yoctoproject.org/meta-raspberrypi "${Y
 _debug "Cloning meta-aatlive..."
 if [ -n "${SSH_PRIVATE_KEY_BASE64}" -a "${CI}" = "true" ]; then #CI is an environment variable provided by Shippable
     _debug "Using provided ssh key..."
-    ssh-agent bash -c 'ssh-add ~/.ssh/id_rsa; git clone -b "${YOCTO_RELEASE}" git@github.com:ableat/meta-aatlive.git "${YOCTO_TEMP_DIR}"/poky/meta-aatlive' || _die "Failed to clone meta-aatlive repository"
+    ssh-agent bash -c 'ssh-add ~/.ssh/id_rsa; git clone -b "${YOCTO_RELEASE}"-next git@github.com:ableat/meta-aatlive.git "${YOCTO_TEMP_DIR}"/poky/meta-aatlive' || _die "Failed to clone meta-aatlive repository"
 else
     git clone -b "${YOCTO_RELEASE}" git@github.com:ableat/meta-aatlive.git "${YOCTO_TEMP_DIR}"/poky/meta-aatlive || _die "Failed to clone meta-aatlive repository"
 fi
