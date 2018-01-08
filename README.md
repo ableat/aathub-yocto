@@ -60,3 +60,5 @@ For the most up-to-date instructions run the following command:
 - This has been sucessfully tested on ubuntu/debian and fedora.
 
 - We base64 a few files used in shippable's secure variables. Use the following command `base64 -w 0 /path/to/file`
+
+- The build system depends on `meta-aatlive`, a closed-source bitbake layer
