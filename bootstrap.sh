@@ -4,7 +4,6 @@
 VERBOSE=0
 UPLOAD=0
 ENABLE_GPG_SIGNING=0
-RELEASE="pyro"
 BASE_PATH="/tmp"
 YOCTO_TARGET="raspberrypi3"
 CURRENT_WORKING_DIR=$(pwd)
@@ -23,6 +22,8 @@ S3CMD_VERSION_MINIMUM="1.6.1"
 S3CMD_VERSION_ACTUAL=""
 PGP_EMAIL=""
 
+export YOCTO_RELEASE="pyro"
+
 RED="\033[0;31m"
 GREEN="\033[32m"
 YELLOW="\033[33m"
@@ -33,6 +34,7 @@ NC="\033[0m" #No color
 #  - AWS_ACCESS_KEY: The AWS IAM public key
 #  - AWS_SECRET_KEY: The AWS IAM private key
 #  - PGP_PRIVATE_KEY_BASE64: Used to sign sha256sum
+#  - SSH_PRIVATE_KEY_BASE64: Used to clone private github repo
 
 _log() {
     echo -e ${0##*/}: "${@}" 1>&2
@@ -190,14 +192,14 @@ while getopts ':h :v :s r: t: b: e: u: p:' option; do
     case "${option}" in
         h|\?) _usage
            exit 0
-              ;;
+           ;;
         v) VERBOSE=1
            ;;
         s) UPLOAD=1
            ;;
         g) ENABLE_GPG_SIGNING=1
            ;;
-        r) RELEASE="${OPTARG}"
+        r) YOCTO_RELEASE="${OPTARG}"
            ;;
         b) BASE_PATH="${OPTARG}"
            ;;
@@ -247,11 +249,14 @@ fi
 #Install ubuntu/debian dependencies
 command -v apt-get >/dev/null 2>&1 && sudo apt-get update -y && sudo apt-get install -y "${apt_dependencies[@]}"
 
+#Check for pgp key
 if [ -z "${PGP_PRIVATE_KEY_BASE64}" ]; then
     if [ $(gpg --list-keys "${PGP_EMAIL}" ) ]; then
         _debug "Hell yeah, the gpg private keys is already imported"
     else
-        _die "PGP_PRIVATE_KEY_BASE64 is undefined and the private key hasnt been previously imported"
+        _debug "PGP_PRIVATE_KEY_BASE64 is undefined and the private key hasnt been previously imported"
+        _debug "Disabling GPG signing..."
+        ENABLE_GPG_SIGNING=0
     fi
 else
     _debug "Importing pgp private key..."
@@ -261,24 +266,45 @@ else
     rm infrastructure.private.asc* || _die "Failed to remove file."
 fi
 
+#Check for ssh key
+if [ -z "${SSH_PRIVATE_KEY_BASE64}" ]; then
+    _debug "SSH_PRIVATE_KEY_BASE64 is undefined."
+else
+    _debug "Importing ssh private key..."
+    echo "${SSH_PRIVATE_KEY_BASE64}" > infrastructure.private.ssh.base64
+    cat infrastructure.private.ssh.base64 | base64 --decode > infrastructure.private.ssh || _die "Failed to decode base64 file."
+    mv infrastructure.private.ssh ~/.ssh/id_rsa || _die "Failed to move private ssh key."
+    chmod 600 ~/.ssh/id_rsa || _die "Failed to change file permissions."
+fi
+
 #Check if directory doesn't exist
 if [ ! -d "${BASE_PATH}" ]; then
     _die "Directory: ${BASE_PATH} does not exist!"
 fi
 
-YOCTO_TEMP_DIR=$(mktemp -t yocto.XXXXXXXX -p "${BASE_PATH}" --directory --dry-run) #There are better ways of doing this.
+export YOCTO_TEMP_DIR=$(mktemp -t yocto.XXXXXXXX -p "${BASE_PATH}" --directory --dry-run) #There are better ways of doing this.
 
 _debug "Creating temporary directory: ${TEMP_DIR}"
 mkdir "${YOCTO_TEMP_DIR}" || _die "Failed to create temporary directory: ${YOCTO_TEMP_DIR}"
 
+_debug "Yocto Project Release: ${YOCTO_RELEASE}"
+
 _debug "Cloning poky..."
-git clone -b "${RELEASE}" git://git.yoctoproject.org/poky "${YOCTO_TEMP_DIR}"/poky || _die "Failed to clone poky repository"
+git clone -b "${YOCTO_RELEASE}" git://git.yoctoproject.org/poky "${YOCTO_TEMP_DIR}"/poky || _die "Failed to clone poky repository"
 
 _debug "Cloning meta-openembedded..."
-git clone -b "${RELEASE}" git://git.openembedded.org/meta-openembedded "${YOCTO_TEMP_DIR}"/poky/meta-openembedded || _die "Failed to clone meta-openembedded repository"
+git clone -b "${YOCTO_RELEASE}" git://git.openembedded.org/meta-openembedded "${YOCTO_TEMP_DIR}"/poky/meta-openembedded || _die "Failed to clone meta-openembedded repository"
 
 _debug "Cloning meta-raspberrypi..."
-git clone -b "${RELEASE}" git://git.yoctoproject.org/meta-raspberrypi "${YOCTO_TEMP_DIR}"/poky/meta-raspberrypi || _die "Failed to clone meta-raspberrypi repository"
+git clone -b "${YOCTO_RELEASE}" git://git.yoctoproject.org/meta-raspberrypi "${YOCTO_TEMP_DIR}"/poky/meta-raspberrypi || _die "Failed to clone meta-raspberrypi repository"
+
+_debug "Cloning meta-aatlive..."
+if [ -n "${SSH_PRIVATE_KEY_BASE64}" -a "${CI}" = "true" ]; then #CI is an environment variable provided by Shippable
+    _debug "Using provided ssh key..."
+    ssh-agent bash -c 'ssh-add ~/.ssh/id_rsa; git clone -b "${YOCTO_RELEASE}" git@github.com:ableat/meta-aatlive.git "${YOCTO_TEMP_DIR}"/poky/meta-aatlive' || _die "Failed to clone meta-aatlive repository"
+else
+    git clone -b "${YOCTO_RELEASE}" git@github.com:ableat/meta-aatlive.git "${YOCTO_TEMP_DIR}"/poky/meta-aatlive || _die "Failed to clone meta-aatlive repository"
+fi
 
 #Create custom bblayers.conf
 mkdir -p "${YOCTO_TEMP_DIR}"/rpi/build/conf
@@ -301,6 +327,7 @@ BBLAYERS ?= " \
   ${YOCTO_TEMP_DIR}/poky/meta-openembedded/meta-networking \
   ${YOCTO_TEMP_DIR}/poky/meta-openembedded/meta-python \
   ${YOCTO_TEMP_DIR}/poky/meta-raspberrypi \
+  ${YOCTO_TEMP_DIR}/poky/meta-aatlive \
   "
 
 BBLAYERS_NON_REMOVABLE ?= " \
