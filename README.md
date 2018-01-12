@@ -1,5 +1,6 @@
 <h1 align="center">
-  <a href="https://github.com/ableat/aathub-yocto"><img src="docs/imgs/brick.gif" alt="aathub yocto" width="200"></a>
+  <a href="https://github.com/ableat/aathub-yocto"><img src="docs/imgs/brick.png" alt="aathub yocto" width="200"></a>
+  <!-- https://pixabay.com/en/letter-alphabet-parts-reading-1546830/ -->
   <br>
   aathub yocto
   <br>
@@ -54,8 +55,10 @@ For the most up-to-date instructions run the following command:
 
 ## Things to consider
 
-The build takes 2 hours to compile on a `c4.2xlarge`, and requires upwards of 50GB of free space.
+- The build takes 2 hours to compile on a `c4.2xlarge`, and requires upwards of 50GB of free space.
 
-This has been sucessfully tested on ubuntu/debian and fedora.
+- This has been sucessfully tested on ubuntu/debian and fedora.
 
-We base64 the pgp private key used in shippable's secure variable. Use the following command `base64 -w 0 infrastructure.private.asc`
+- We base64 a few files used in shippable's secure variables. Use the following command `base64 -w 0 /path/to/file`
+
+- The build system depends on `meta-aatlive`, a closed-source bitbake layer
