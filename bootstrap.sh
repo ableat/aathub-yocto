@@ -321,7 +321,6 @@ BBFILES ?= ""
 BBLAYERS ?= " \
   ${YOCTO_TEMP_DIR}/poky/meta \
   ${YOCTO_TEMP_DIR}/poky/meta-poky \
-  ${YOCTO_TEMP_DIR}/poky/meta-yocto-bsp \
   ${YOCTO_TEMP_DIR}/poky/meta-openembedded/meta-oe \
   ${YOCTO_TEMP_DIR}/poky/meta-openembedded/meta-multimedia \
   ${YOCTO_TEMP_DIR}/poky/meta-openembedded/meta-networking \
