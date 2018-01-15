@@ -302,7 +302,7 @@ _debug "Cloning openembedded-core..."
 git clone -b "${YOCTO_RELEASE}" git://git.openembedded.org/openembedded-core "${YOCTO_TEMP_DIR}"/poky/openembedded-core || _die "Failed to clone openembedded-core repository"
 
 _debug "Cloning meta-swupd..."
-git clone -b "${YOCTO_RELEASE}" git://git.yoctoproject.org/meta-swupd "${YOCTO_TEMP_DIR}"/poky/meta-swupd || _die "Failed to clone meta-swupd repository"
+git clone git://git.yoctoproject.org/meta-swupd "${YOCTO_TEMP_DIR}"/poky/meta-swupd || _die "Failed to clone meta-swupd repository"
 
 _debug "Cloning meta-aatlive..."
 if [ -n "${SSH_PRIVATE_KEY_BASE64}" -a "${CI}" = "true" ]; then #CI is an environment variable provided by Shippable
