@@ -53,6 +53,13 @@ For the most up-to-date instructions run the following command:
 ./bootstrap.sh -h
 ```
 
+## Testing
+
+If `oe-init-build-env` isn't sourced, do so now
+```
+runqemu path/to/kernel-image.bin path/to/root-filesystem.ext3
+```
+
 ## Things to consider
 
 - The build takes 2 hours to compile on a `c4.2xlarge`, and requires upwards of 50GB of free space.
