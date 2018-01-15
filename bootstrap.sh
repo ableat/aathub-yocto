@@ -298,6 +298,12 @@ git clone -b "${YOCTO_RELEASE}" git://git.openembedded.org/meta-openembedded "${
 _debug "Cloning meta-raspberrypi..."
 git clone -b "${YOCTO_RELEASE}" git://git.yoctoproject.org/meta-raspberrypi "${YOCTO_TEMP_DIR}"/poky/meta-raspberrypi || _die "Failed to clone meta-raspberrypi repository"
 
+_debug "Cloning openembedded-core..."
+git clone -b "${YOCTO_RELEASE}" git://git.openembedded.org/openembedded-core "${YOCTO_TEMP_DIR}"/poky/openembedded-core || _die "Failed to clone openembedded-core repository"
+
+_debug "Cloning meta-swupd..."
+git clone -b "${YOCTO_RELEASE}" git://git.yoctoproject.org/meta-swupd "${YOCTO_TEMP_DIR}"/poky/meta-swupd || _die "Failed to clone meta-swupd repository"
+
 _debug "Cloning meta-aatlive..."
 if [ -n "${SSH_PRIVATE_KEY_BASE64}" -a "${CI}" = "true" ]; then #CI is an environment variable provided by Shippable
     _debug "Using provided ssh key..."
@@ -326,6 +332,8 @@ BBLAYERS ?= " \
   ${YOCTO_TEMP_DIR}/poky/meta-openembedded/meta-networking \
   ${YOCTO_TEMP_DIR}/poky/meta-openembedded/meta-python \
   ${YOCTO_TEMP_DIR}/poky/meta-raspberrypi \
+  ${YOCTO_TEMP_DIR}/poky/openembedded-core \
+  ${YOCTO_TEMP_DIR}/poky/meta-swupd \
   ${YOCTO_TEMP_DIR}/poky/meta-aatlive \
   "
 
