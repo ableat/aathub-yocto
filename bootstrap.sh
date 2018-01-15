@@ -376,7 +376,7 @@ echo $(sha256sum "${YOCTO_RESULTS_SDIMG}" "${YOCTO_RESULTS_EXT3}") > "${YOCTO_RE
 
 if [ "${ENABLE_GPG_SIGNING}" -eq 1 -a -n "${PGP_EMAIL}" ]; then
     _debug "Signing sha256sums..."
-    gpg -vv --no-tty -u "${PGP_EMAIL}" --output "${YOCTO_RESULTS_BASENAME}".sha256sums.sig --detach-sig "${YOCTO_RESULTS_BASENAME}".sha256sums || _die "Failed to sign sha256sums."
+    gpg -vv --no-tty --local-user "${PGP_EMAIL}" --output "${YOCTO_RESULTS_BASENAME}".sha256sums.sig --detach-sig "${YOCTO_RESULTS_BASENAME}".sha256sums || _die "Failed to sign sha256sums."
 else
     _debug "Skipping gpg signing..."
 fi
