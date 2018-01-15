@@ -220,8 +220,14 @@ done
 shift $((OPTIND - 1))
 
 GIT_REPO_NAME=$(basename $(git rev-parse --show-toplevel))
-GIT_REPO_BRANCH=$(git branch 2>/dev/null | grep '^*' | cut -d' ' -f2)
 GIT_COMMIT_HASH=$(git rev-parse --short HEAD)
+
+if [ "${CI}" = "true" ]; then
+    GIT_REPO_BRANCH="${BRANCH}" #BRANCH is an environment variable provided by shippable
+else
+    GIT_REPO_BRANCH=$(git branch 2>/dev/null | grep '^*' | cut -d' ' -f2)
+fi
+
 
 _debug "repo name: ${GIT_REPO_NAME}"
 _debug "repo branch: ${GIT_REPO_BRANCH}"
