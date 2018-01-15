@@ -228,7 +228,6 @@ else
     GIT_REPO_BRANCH=$(git branch 2>/dev/null | grep '^*' | cut -d' ' -f2)
 fi
 
-
 _debug "repo name: ${GIT_REPO_NAME}"
 _debug "repo branch: ${GIT_REPO_BRANCH}"
 _debug "commit hash: ${GIT_COMMIT_HASH}"
