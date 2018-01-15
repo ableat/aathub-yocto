@@ -284,7 +284,7 @@ fi
 
 export YOCTO_TEMP_DIR=$(mktemp -t yocto.XXXXXXXX -p "${BASE_PATH}" --directory --dry-run) #There are better ways of doing this.
 
-_debug "Creating temporary directory: ${TEMP_DIR}"
+_debug "Creating temporary directory: ${YOCTO_TEMP_DIR}"
 mkdir "${YOCTO_TEMP_DIR}" || _die "Failed to create temporary directory: ${YOCTO_TEMP_DIR}"
 
 _debug "Yocto Project Release: ${YOCTO_RELEASE}"
