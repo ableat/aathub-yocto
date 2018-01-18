@@ -170,7 +170,7 @@ dnf_dependencies=(
 )
 
 _usage() {
-    cat << EOF
+cat << EOF
 
 ${0##*/} [-h] [-s] [-v] [-g] [-r string] [-p string] [-b path/to/directory] [-t string] -- setup yocto and compile/upload image
 where:
@@ -289,7 +289,7 @@ fi
 
 export YOCTO_TEMP_DIR=$(mktemp -t yocto.XXXXXXXX -p "${BASE_PATH}" --directory --dry-run) #There are better ways of doing this.
 
-_debug "Creating temporary directory: ${TEMP_DIR}"
+_debug "Creating temporary directory: ${YOCTO_TEMP_DIR}"
 mkdir "${YOCTO_TEMP_DIR}" || _die "Failed to create temporary directory: ${YOCTO_TEMP_DIR}"
 
 _debug "Yocto Project Release: ${YOCTO_RELEASE}"
@@ -367,7 +367,6 @@ sudo su "${YOCTO_BUILD_USER}" -p -c '\
     bitbake "${BITBAKE_RECIPE}"' || {
         _die "Failed to build image ಥ﹏ಥ"
     }
-
 _success "The image was successfully compiled ♥‿♥"
 
 YOCTO_RESULTS_DIR="${YOCTO_TEMP_DIR}/rpi/build/tmp/deploy/images/${YOCTO_TARGET}"
