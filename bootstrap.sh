@@ -362,10 +362,8 @@ for var in ${variables[@]}; do
         _die "One or more variables are not valid. Only reference variables that have been previously defined."
     fi
 
-
-
     #check if variable is an array
-    if [ $(declare -p $var) == "declare -a"* ]; then
+    if [[ $(declare -p $var) == "declare -a"* ]]; then
         _debug "${var}: $(eval echo \${$var[@]})"
         echo $(eval echo \${$var[@]}) > /tmp/aathub-yocto/env/"${var}" || _die "Failed to write array to file."
     else
