@@ -379,7 +379,8 @@ sudo su "${YOCTO_BUILD_USER}" -p -c '\
 
     source "${YOCTO_TEMP_DIR}"/poky/oe-init-build-env "${YOCTO_TEMP_DIR}"/rpi/build && \
     echo MACHINE ??= \"${YOCTO_TARGET}\" >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
-    echo CORE_IMAGE_EXTRA_INSTALL += \""${YOCTO_EXTRA_PACKAGES[@]}"\" && \
+    echo CORE_IMAGE_EXTRA_INSTALL += \""${YOCTO_EXTRA_PACKAGES[@]}"\" >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
+
     bitbake "${BITBAKE_RECIPE}"' || {
         _die "Failed to build image ಥ﹏ಥ"
     }
