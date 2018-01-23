@@ -341,6 +341,13 @@ BBLAYERS_NON_REMOVABLE ?= " \
 
 EOF
 
+YOCTO_EXTRA_PACKAGES=(    #layer dependency
+    "openssh"             #openembedded-core
+    "bash"                #openembedded-core
+    "git"                 #openembedded-core
+    "systemd"             #openembedded-core
+)
+
 #Quick hack that if we're totally honest, probably won't be fixed
 #I was having problems preserving env variables across su (and yeah I know there's a param that SHOULD allow this)
 mkdir -p /tmp/env
@@ -348,12 +355,19 @@ variables=(
     "YOCTO_TEMP_DIR"
     "YOCTO_TARGET"
     "BITBAKE_RECIPE"
+    "YOCTO_EXTRA_PACKAGES"
 )
 for var in ${variables[@]}; do
     if [ -z $(eval echo \$$var) ]; then
         _die "One or more variables are not valid. Only reference variables that have been previously defined."
     fi
-    echo $(eval echo \$$var) > /tmp/env/"${var}" || _die "Failed to write to file."
+
+    #check if variable is an array
+    if [ $(declare -p $var) == "declare -a"* ]; then
+        echo $(eval echo \${$var[@]}) > /tmp/env/"${var}" || _die "Failed to write array to file."
+    else
+        echo $(eval echo \$$var) > /tmp/env/"${var}" || _die "Failed to write string to file."
+    fi
 done
 
 _debug "Building image. Additional images can be found in ${YOCTO_TEMP_DIR}/meta*/recipes*/images/*.bb"
@@ -361,9 +375,11 @@ sudo su "${YOCTO_BUILD_USER}" -p -c '\
     YOCTO_TEMP_DIR="$(cat /tmp/env/YOCTO_TEMP_DIR)" && \
     YOCTO_TARGET="$(cat /tmp/env/YOCTO_TARGET)" && \
     BITBAKE_RECIPE="$(cat /tmp/env/BITBAKE_RECIPE)" && \
+    IFS=" " YOCTO_EXTRA_PACKAGES=("$(cat /tmp/env/YOCTO_EXTRA_PACKAGES)") && \
 
     source "${YOCTO_TEMP_DIR}"/poky/oe-init-build-env "${YOCTO_TEMP_DIR}"/rpi/build && \
     echo MACHINE ??= \"${YOCTO_TARGET}\" >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
+    echo CORE_IMAGE_EXTRA_INSTALL += \""${YOCTO_EXTRA_PACKAGES[@]}"\" && \
     bitbake "${BITBAKE_RECIPE}"' || {
         _die "Failed to build image ಥ﹏ಥ"
     }
