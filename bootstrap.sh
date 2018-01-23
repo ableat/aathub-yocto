@@ -375,11 +375,11 @@ sudo su "${YOCTO_BUILD_USER}" -p -c '\
     YOCTO_TEMP_DIR="$(cat /tmp/aathub-yocto/env/YOCTO_TEMP_DIR)" && \
     YOCTO_TARGET="$(cat /tmp/aathub-yocto/env/YOCTO_TARGET)" && \
     BITBAKE_RECIPE="$(cat /tmp/aathub-yocto/env/BITBAKE_RECIPE)" && \
-    IFS=" " YOCTO_EXTRA_PACKAGES=("$(cat /tmp/aathub-yocto/env/YOCTO_EXTRA_PACKAGES)") && \
+    YOCTO_EXTRA_PACKAGES="$(cat /tmp/aathub-yocto/env/YOCTO_EXTRA_PACKAGES)" && \
 
     source "${YOCTO_TEMP_DIR}"/poky/oe-init-build-env "${YOCTO_TEMP_DIR}"/rpi/build && \
     echo MACHINE ??= \"${YOCTO_TARGET}\" >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
-    echo CORE_IMAGE_EXTRA_INSTALL += \""${YOCTO_EXTRA_PACKAGES[@]}"\" >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
+    echo CORE_IMAGE_EXTRA_INSTALL += \"${YOCTO_EXTRA_PACKAGES}\" >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
 
     echo "!!!! generated conf/local.conf !!!!" && cat "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
 
