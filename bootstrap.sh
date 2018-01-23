@@ -311,6 +311,19 @@ else
     git clone -b "${YOCTO_RELEASE}" git@github.com:ableat/meta-aatlive.git "${YOCTO_TEMP_DIR}"/poky/meta-aatlive || _die "Failed to clone meta-aatlive repository"
 fi
 
+#Use systemd instead of SysVinit
+#http://www.yoctoproject.org/docs/current/dev-manual/dev-manual.html#selecting-an-initialization-manager
+cat << EOF > "${YOCTO_TEMP_DIR}"/poky/meta-poky/conf/distro/poky.conf
+DISTRO_FEATURES_append = " systemd"
+VIRTUAL-RUNTIME_init_manager = "systemd"
+
+#Prevent the SysVinit distribution feature from being automatically enabled
+DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
+
+#Remove initscripts
+VIRTUAL-RUNTIME_initscripts = ""
+EOF
+
 #Create custom bblayers.conf
 mkdir -p "${YOCTO_TEMP_DIR}"/rpi/build/conf
 sudo chmod -R 777 "${YOCTO_TEMP_DIR}" || _die "Failed to change directory: ${YOCTO_TEMP_DIR} permissions"
