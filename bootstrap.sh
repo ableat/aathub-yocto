@@ -381,6 +381,8 @@ sudo su "${YOCTO_BUILD_USER}" -p -c '\
     echo MACHINE ??= \"${YOCTO_TARGET}\" >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
     echo CORE_IMAGE_EXTRA_INSTALL += \""${YOCTO_EXTRA_PACKAGES[@]}"\" >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
 
+    echo "!!!! generated conf/local.conf !!!!" && cat "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
+
     bitbake "${BITBAKE_RECIPE}"' || {
         _die "Failed to build image ಥ﹏ಥ"
     }
