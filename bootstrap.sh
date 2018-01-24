@@ -10,7 +10,7 @@ CURRENT_WORKING_DIR=$(pwd)
 YOCTO_BUILD_USER=$(whoami)
 YOCTO_TEMP_DIR=""
 YOCTO_RESULTS_DIR=""
-BITBAKE_RECIPE="rpi-basic-image"
+BITBAKE_RECIPE="rpi-hwup-image"
 AWS_S3_BUCKET="s3://build.s3.aatlive.net"
 AWS_S3_BUCKET_PATH=""
 GIT_REPO_NAME=""
@@ -167,6 +167,8 @@ dnf_dependencies=(
     "SDL-devel"
     "xterm"
     "gpg2"
+    "texinfo"
+    "cpan"
 )
 
 _usage() {
@@ -175,10 +177,10 @@ cat << EOF
 ${0##*/} [-h] [-s] [-v] [-g] [-r string] [-p string] [-b path/to/directory] [-t string] -- setup yocto and compile/upload image
 where:
     -h  show this help text
-    -r  set yocto project release (default: pyro)
-    -b  set path for temporary files (default: /tmp)
-    -t  set target (default: raspberrypi3)
-    -p  set bitbake recipe (default: rpi-basic-image)
+    -r  set yocto project release (default: ${YOCTO_RELEASE})
+    -b  set path for temporary files (default: ${BASE_PATH})
+    -t  set target (default: ${YOCTO_TARGET})
+    -p  set bitbake recipe (default: ${BITBAKE_RECIPE})
     -u  set yocto build user
     -v  verbose output
     -g  gpg sign sha256sums
@@ -253,6 +255,16 @@ fi
 
 #Install ubuntu/debian dependencies
 command -v apt-get >/dev/null 2>&1 && sudo apt-get update -y && sudo apt-get install -y "${apt_dependencies[@]}"
+
+#Auto-configure cpan
+if [ "${CI}" = "true" ]; then
+    (echo y;echo o conf prerequisites_policy follow;echo o conf commit)|cpan || {
+        _die "Failed to setup cpan."
+    }
+fi
+
+#If running locally and the following line fails run "cpan" to manually configure cpan
+cpan install bignum bigint || _die "Failed to install perl modules."
 
 #Check for pgp key
 if [ -z "${PGP_PRIVATE_KEY_BASE64}" ]; then
