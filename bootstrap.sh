@@ -408,12 +408,14 @@ sudo su "${YOCTO_BUILD_USER}" -p -c '\
     echo MACHINE ??= \"${YOCTO_TARGET}\" >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
     echo CORE_IMAGE_EXTRA_INSTALL += \"${YOCTO_EXTRA_PACKAGES}\" >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
 
-    echo "!!!! generated conf/local.conf !!!!" && cat "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
+    #Debugging
+    echo -e "\n!!!! start of conf/local.conf !!!!\n" && \
+    cat "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
+    echo -e "\n!!!! end of conf/local.conf !!!!\n" && \
 
-    bitbake "${BITBAKE_RECIPE}"' || {
+    bitbake "${BITBAKE_RECIPE}"' && _success "The image was successfully compiled ♥‿♥" || {
         _die "Failed to build image ಥ﹏ಥ"
     }
-_success "The image was successfully compiled ♥‿♥"
 
 YOCTO_RESULTS_DIR="${YOCTO_TEMP_DIR}/rpi/build/tmp/deploy/images/${YOCTO_TARGET}"
 YOCTO_RESULTS_BASENAME=$(basename "${YOCTO_RESULTS_SDIMG}" .rpi-sdimg)
