@@ -375,7 +375,7 @@ YOCTO_EXTRA_PACKAGES=(    #layer dependency
 
 YOCTO_EXTRA_IMAGE_FEATURES=(
     "package-management"  #https://wiki.yoctoproject.org/wiki/Smart
-}
+)
 
 #Quick hack that if we're totally honest, probably won't be fixed
 #I was having problems preserving env variables across su (and yeah I know there's a param that SHOULD allow this)
