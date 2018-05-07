@@ -373,6 +373,10 @@ YOCTO_EXTRA_PACKAGES=(    #layer dependency
     "systemd"             #openembedded-core
 )
 
+YOCTO_EXTRA_IMAGE_FEATURES=(
+    "package-management"  #https://wiki.yoctoproject.org/wiki/Smart
+}
+
 #Quick hack that if we're totally honest, probably won't be fixed
 #I was having problems preserving env variables across su (and yeah I know there's a param that SHOULD allow this)
 mkdir -p /tmp/aathub-yocto/env
@@ -381,6 +385,7 @@ variables=(
     "YOCTO_TARGET"
     "BITBAKE_RECIPE"
     "YOCTO_EXTRA_PACKAGES"
+    "YOCTO_EXTRA_IMAGE_FEATURES"
 )
 for var in ${variables[@]}; do
     if [ -z $(eval echo \$$var) ]; then
@@ -403,10 +408,12 @@ sudo su "${YOCTO_BUILD_USER}" -p -c '\
     YOCTO_TARGET="$(cat /tmp/aathub-yocto/env/YOCTO_TARGET)" && \
     BITBAKE_RECIPE="$(cat /tmp/aathub-yocto/env/BITBAKE_RECIPE)" && \
     YOCTO_EXTRA_PACKAGES="$(cat /tmp/aathub-yocto/env/YOCTO_EXTRA_PACKAGES)" && \
+    YOCTO_EXTRA_IMAGE_FEATURES="$(cat /tmp/aathub-yocto/env/YOCTO_EXTRA_IMAGE_FEATURES)" && \
 
     source "${YOCTO_TEMP_DIR}"/poky/oe-init-build-env "${YOCTO_TEMP_DIR}"/rpi/build && \
     echo MACHINE ??= \"${YOCTO_TARGET}\" >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
     echo CORE_IMAGE_EXTRA_INSTALL += \"${YOCTO_EXTRA_PACKAGES}\" >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
+    echo EXTRA_IMAGE_FEATURES += \"${YOCTO_EXTRA_IMAGE_FEATURES}\" >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
 
     #Debugging
     echo -e "\n!!!! start of conf/local.conf !!!!\n" && \
