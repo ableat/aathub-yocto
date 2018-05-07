@@ -367,10 +367,18 @@ BBLAYERS_NON_REMOVABLE ?= " \
 EOF
 
 YOCTO_EXTRA_PACKAGES=(    #layer dependency
-    "openssh"             #openembedded-core
-    "bash"                #openembedded-core
-    "git"                 #openembedded-core
-    "systemd"             #openembedded-core
+    "curl"
+    "ethtool"
+    "gawk"
+    "git"          
+    "i2c-tools"
+    "jq"
+    "nano"
+    "openssh"
+    "rsync"
+    "systemd"           
+    "traceroute"
+    "vim"
 )
 
 YOCTO_EXTRA_IMAGE_FEATURES=(
