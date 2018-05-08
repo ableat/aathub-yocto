@@ -295,7 +295,7 @@ else
 fi
 
 _debug "Checking Github SSH authentication..."
-ssh-agent bash -c 'ssh-add ~/.ssh/id_rsa; ssh -T git@github.com
+ssh-agent bash -c 'ssh-add ~/.ssh/id_rsa; ssh -T git@github.com || true
 
 #Check if directory doesn't exist
 if [ ! -d "${BASE_PATH}" ]; then
