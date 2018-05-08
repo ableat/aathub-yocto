@@ -64,6 +64,17 @@ _cleanup() {
     rm -rf ${TEMP_DIR}
 }
 
+_recurse() {
+    for i in "$1"/*;do
+        if [ -d "$i" ];then
+            echo "dir: $i"
+            recurse "$i"
+        elif [ -f "$i" ]; then
+            echo "file: $i"
+        fi
+    done
+}
+
 _install_s3cmd() {
     #Install s3cmd manually as the version in the apt repository is terribly out-of-date
     _debug "Installing s3cmd manually..."
@@ -438,7 +449,7 @@ sudo su "${YOCTO_BUILD_USER}" -p -c '\
     }
 
 YOCTO_RESULTS_DIR="${YOCTO_TEMP_DIR}/rpi/build/tmp/deploy/images/${YOCTO_TARGET}"
-_debug "Directory Results: $(ls $YOCTO_RESULTS_DIR)"
+_debug "Directory Results: $(_recurse ${YOCTO_TEMP_DIR}/rpi/build/tmp/deploy)"
 
 #Cherry pick the files we care about...
 YOCTO_RESULTS_BASENAME=$(basename "${YOCTO_RESULTS_SDIMG}" .rpi-sdimg)
