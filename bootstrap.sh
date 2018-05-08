@@ -83,6 +83,7 @@ _install_s3cmd() {
     cd "${CURRENT_WORKING_DIR}"
 }
 
+#Compares semantic versions
 _compare_versions () {
     if [ ! -z $3 ]; then
         _die  "More than two arguments were passed in!"
@@ -267,6 +268,7 @@ fi
 cpan install bignum bigint || _die "Failed to install perl modules."
 
 #Check for pgp key
+#This feature should probably never be used... signing should be done manually
 if [ -z "${PGP_PRIVATE_KEY_BASE64}" ]; then
     if [ $(gpg --list-keys "${PGP_EMAIL}" ) ]; then
         _debug "Hell yeah, the gpg private keys is already imported"
@@ -436,6 +438,9 @@ sudo su "${YOCTO_BUILD_USER}" -p -c '\
     }
 
 YOCTO_RESULTS_DIR="${YOCTO_TEMP_DIR}/rpi/build/tmp/deploy/images/${YOCTO_TARGET}"
+_debug "Directory Results: $(ls $YOCTO_RESULTS_DIR)"
+
+#Cherry pick the files we care about...
 YOCTO_RESULTS_BASENAME=$(basename "${YOCTO_RESULTS_SDIMG}" .rpi-sdimg)
 YOCTO_RESULTS_SDIMG=$(ls "${YOCTO_RESULTS_DIR}"/*.rootfs.ext3)
 YOCTO_RESULTS_EXT3=$(ls "${YOCTO_RESULTS_DIR}"/*.rootfs.rpi-sdimg)
