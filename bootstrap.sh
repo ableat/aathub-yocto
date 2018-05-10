@@ -307,8 +307,10 @@ else
     chmod 600 ~/.ssh/id_rsa || _die "Failed to change file permissions."
 fi
 
-_debug "Checking Github SSH authentication..."
-ssh-agent bash -c 'ssh-add ~/.ssh/id_rsa; ssh -T git@github.com || true
+if [ "${CI}" = "true" ]; then
+    _debug "Checking Github SSH authentication..."
+    ssh-agent bash -c 'ssh-add ~/.ssh/id_rsa; ssh -T git@github.com || true
+fi
 
 #Check if directory doesn't exist
 if [ ! -d "${BASE_PATH}" ]; then
