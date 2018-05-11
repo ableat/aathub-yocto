@@ -309,7 +309,7 @@ fi
 
 if [ "${CI}" = "true" ]; then
     _debug "Checking Github SSH authentication..."
-    ssh-agent bash -c 'ssh-add ~/.ssh/id_rsa; ssh -T git@github.com || true
+    ssh-agent bash -c 'ssh-add ~/.ssh/id_rsa; ssh -T git@github.com' || true
 fi
 
 #Check if directory doesn't exist
