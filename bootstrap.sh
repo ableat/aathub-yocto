@@ -426,7 +426,7 @@ sudo su "${YOCTO_BUILD_USER}" -p -c '\
     }
 
 YOCTO_RESULTS_DIR="${YOCTO_TEMP_DIR}/rpi/build/tmp/deploy/images/${YOCTO_TARGET}"
-_debug "Directory Results: $(ls ${YOCTO_RESULTS_DIR}")"
+_debug "Directory Results: $(ls ${YOCTO_RESULTS_DIR})"
 
 #Cherry pick the files we care about...
 YOCTO_RESULTS_BASENAME=$(basename "${YOCTO_RESULTS_SDIMG}" .rpi-sdimg)
