@@ -64,17 +64,6 @@ _cleanup() {
     rm -rf ${TEMP_DIR}
 }
 
-_recurse() {
-    for i in "$1"/*;do
-        if [ -d "$i" ];then
-            echo "dir: $i"
-            recurse "$i"
-        elif [ -f "$i" ]; then
-            echo "file: $i"
-        fi
-    done
-}
-
 _install_s3cmd() {
     #Install s3cmd manually as the version in the apt repository is terribly out-of-date
     _debug "Installing s3cmd manually..."
@@ -341,19 +330,6 @@ else
     git clone -b "${YOCTO_RELEASE}" git@github.com:ableat/meta-aatlive.git "${YOCTO_TEMP_DIR}"/poky/meta-aatlive || _die "Failed to clone meta-aatlive repository"
 fi
 
-#Use systemd instead of SysVinit
-#http://www.yoctoproject.org/docs/current/dev-manual/dev-manual.html#selecting-an-initialization-manager
-cat << EOF > "${YOCTO_TEMP_DIR}"/poky/meta-poky/conf/distro/poky.conf
-DISTRO_FEATURES_append = " systemd"
-VIRTUAL-RUNTIME_init_manager = "systemd"
-
-#Prevent the SysVinit distribution feature from being automatically enabled
-DISTRO_FEATURES_BACKFILL_CONSIDERED = "sysvinit"
-
-#Remove initscripts
-VIRTUAL-RUNTIME_initscripts = ""
-EOF
-
 #Create custom bblayers.conf
 mkdir -p "${YOCTO_TEMP_DIR}"/rpi/build/conf
 sudo chmod -R 777 "${YOCTO_TEMP_DIR}" || _die "Failed to change directory: ${YOCTO_TEMP_DIR} permissions"
@@ -393,8 +369,7 @@ YOCTO_EXTRA_PACKAGES=(    #layer dependency
     "jq"
     "nano"
     "openssh"
-    "rsync"
-    "systemd"           
+    "rsync"        
     "traceroute"
     "vim"
 )
@@ -451,7 +426,7 @@ sudo su "${YOCTO_BUILD_USER}" -p -c '\
     }
 
 YOCTO_RESULTS_DIR="${YOCTO_TEMP_DIR}/rpi/build/tmp/deploy/images/${YOCTO_TARGET}"
-_debug "Directory Results: $(_recurse ${YOCTO_TEMP_DIR}/rpi/build/tmp/deploy)"
+_debug "Directory Results: $(ls ${YOCTO_RESULTS_DIR}")"
 
 #Cherry pick the files we care about...
 YOCTO_RESULTS_BASENAME=$(basename "${YOCTO_RESULTS_SDIMG}" .rpi-sdimg)
