@@ -10,7 +10,7 @@ CURRENT_WORKING_DIR=$(pwd)
 YOCTO_BUILD_USER=$(whoami)
 YOCTO_TEMP_DIR=""
 YOCTO_RESULTS_DIR=""
-BITBAKE_RECIPE="rpi-basic-image"
+BITBAKE_RECIPE="rpi-hwup-image"
 AWS_S3_BUCKET="s3://build.s3.aatlive.net"
 AWS_S3_BUCKET_PATH=""
 GIT_REPO_NAME=""
@@ -83,6 +83,7 @@ _install_s3cmd() {
     cd "${CURRENT_WORKING_DIR}"
 }
 
+#Compares semantic versions
 _compare_versions () {
     if [ ! -z $3 ]; then
         _die  "More than two arguments were passed in!"
@@ -167,6 +168,8 @@ dnf_dependencies=(
     "SDL-devel"
     "xterm"
     "gpg2"
+    "texinfo"
+    "cpan"
 )
 
 _usage() {
@@ -175,10 +178,10 @@ cat << EOF
 ${0##*/} [-h] [-s] [-v] [-g] [-r string] [-p string] [-b path/to/directory] [-t string] -- setup yocto and compile/upload image
 where:
     -h  show this help text
-    -r  set yocto project release (default: pyro)
-    -b  set path for temporary files (default: /tmp)
-    -t  set target (default: raspberrypi3)
-    -p  set bitbake recipe (default: rpi-basic-image)
+    -r  set yocto project release (default: ${YOCTO_RELEASE})
+    -b  set path for temporary files (default: ${BASE_PATH})
+    -t  set target (default: ${YOCTO_TARGET})
+    -p  set bitbake recipe (default: ${BITBAKE_RECIPE})
     -u  set yocto build user
     -v  verbose output
     -g  gpg sign sha256sums
@@ -254,7 +257,18 @@ fi
 #Install ubuntu/debian dependencies
 command -v apt-get >/dev/null 2>&1 && sudo apt-get update -y && sudo apt-get install -y "${apt_dependencies[@]}"
 
+#Auto-configure cpan
+if [ "${CI}" = "true" ]; then
+    (echo y;echo o conf prerequisites_policy follow;echo o conf commit)|cpan || {
+        _die "Failed to setup cpan."
+    }
+fi
+
+#If running locally and the following line fails run "cpan" to manually configure cpan
+cpan install bignum bigint || _die "Failed to install perl modules."
+
 #Check for pgp key
+#This feature should probably never be used... signing should be done manually
 if [ -z "${PGP_PRIVATE_KEY_BASE64}" ]; then
     if [ $(gpg --list-keys "${PGP_EMAIL}" ) ]; then
         _debug "Hell yeah, the gpg private keys is already imported"
@@ -280,6 +294,11 @@ else
     cat infrastructure.private.ssh.base64 | base64 --decode > infrastructure.private.ssh || _die "Failed to decode base64 file."
     mv infrastructure.private.ssh ~/.ssh/id_rsa || _die "Failed to move private ssh key."
     chmod 600 ~/.ssh/id_rsa || _die "Failed to change file permissions."
+fi
+
+if [ "${CI}" = "true" ]; then
+    _debug "Checking Github SSH authentication..."
+    ssh-agent bash -c 'ssh-add ~/.ssh/id_rsa; ssh -T git@github.com' || true
 fi
 
 #Check if directory doesn't exist
@@ -341,35 +360,75 @@ BBLAYERS_NON_REMOVABLE ?= " \
 
 EOF
 
+YOCTO_EXTRA_PACKAGES=(    #layer dependency
+    "curl"
+    "ethtool"
+    "gawk"
+    "git"          
+    "i2c-tools"
+    "jq"
+    "nano"
+    "openssh"
+    "rsync"        
+    "traceroute"
+    "vim"
+)
+
+YOCTO_EXTRA_IMAGE_FEATURES=(
+    "package-management"  #https://wiki.yoctoproject.org/wiki/Smart
+)
+
 #Quick hack that if we're totally honest, probably won't be fixed
 #I was having problems preserving env variables across su (and yeah I know there's a param that SHOULD allow this)
-mkdir -p /tmp/env
+mkdir -p /tmp/aathub-yocto/env
 variables=(
     "YOCTO_TEMP_DIR"
     "YOCTO_TARGET"
     "BITBAKE_RECIPE"
+    "YOCTO_EXTRA_PACKAGES"
+    "YOCTO_EXTRA_IMAGE_FEATURES"
 )
 for var in ${variables[@]}; do
     if [ -z $(eval echo \$$var) ]; then
         _die "One or more variables are not valid. Only reference variables that have been previously defined."
     fi
-    echo $(eval echo \$$var) > /tmp/env/"${var}" || _die "Failed to write to file."
+
+    #check if variable is an array
+    if [[ $(declare -p $var) == "declare -a"* ]]; then
+        _debug "${var}: $(eval echo \${$var[@]})"
+        echo $(eval echo \${$var[@]}) > /tmp/aathub-yocto/env/"${var}" || _die "Failed to write array to file."
+    else
+        _debug "${var}: $(eval echo \$$var)"
+        echo $(eval echo \$$var) > /tmp/aathub-yocto/env/"${var}" || _die "Failed to write string to file."
+    fi
 done
 
 _debug "Building image. Additional images can be found in ${YOCTO_TEMP_DIR}/meta*/recipes*/images/*.bb"
 sudo su "${YOCTO_BUILD_USER}" -p -c '\
-    YOCTO_TEMP_DIR="$(cat /tmp/env/YOCTO_TEMP_DIR)" && \
-    YOCTO_TARGET="$(cat /tmp/env/YOCTO_TARGET)" && \
-    BITBAKE_RECIPE="$(cat /tmp/env/BITBAKE_RECIPE)" && \
+    YOCTO_TEMP_DIR="$(cat /tmp/aathub-yocto/env/YOCTO_TEMP_DIR)" && \
+    YOCTO_TARGET="$(cat /tmp/aathub-yocto/env/YOCTO_TARGET)" && \
+    BITBAKE_RECIPE="$(cat /tmp/aathub-yocto/env/BITBAKE_RECIPE)" && \
+    YOCTO_EXTRA_PACKAGES="$(cat /tmp/aathub-yocto/env/YOCTO_EXTRA_PACKAGES)" && \
+    YOCTO_EXTRA_IMAGE_FEATURES="$(cat /tmp/aathub-yocto/env/YOCTO_EXTRA_IMAGE_FEATURES)" && \
 
     source "${YOCTO_TEMP_DIR}"/poky/oe-init-build-env "${YOCTO_TEMP_DIR}"/rpi/build && \
     echo MACHINE ??= \"${YOCTO_TARGET}\" >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
-    bitbake "${BITBAKE_RECIPE}"' || {
+    echo CORE_IMAGE_EXTRA_INSTALL += \"${YOCTO_EXTRA_PACKAGES}\" >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
+    echo EXTRA_IMAGE_FEATURES += \"${YOCTO_EXTRA_IMAGE_FEATURES}\" >> "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
+
+    #Debugging
+    echo -e "\n!!!! start of conf/local.conf !!!!\n" && \
+    cat "${YOCTO_TEMP_DIR}"/rpi/build/conf/local.conf && \
+    echo -e "\n!!!! end of conf/local.conf !!!!\n" && \
+
+    bitbake "${BITBAKE_RECIPE}"' && _success "The image was successfully compiled ♥‿♥" || {
         _die "Failed to build image ಥ﹏ಥ"
     }
-_success "The image was successfully compiled ♥‿♥"
 
 YOCTO_RESULTS_DIR="${YOCTO_TEMP_DIR}/rpi/build/tmp/deploy/images/${YOCTO_TARGET}"
+_debug "Directory Results: $(ls ${YOCTO_RESULTS_DIR})"
+
+#Cherry pick the files we care about...
 YOCTO_RESULTS_BASENAME=$(basename "${YOCTO_RESULTS_SDIMG}" .rpi-sdimg)
 YOCTO_RESULTS_SDIMG=$(ls "${YOCTO_RESULTS_DIR}"/*.rootfs.ext3)
 YOCTO_RESULTS_EXT3=$(ls "${YOCTO_RESULTS_DIR}"/*.rootfs.rpi-sdimg)
