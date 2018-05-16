@@ -109,6 +109,7 @@ fi
 
 apt_dependencies=(
     "gawk"
+    "bzip2"
     "wget"
     "git-core"
     "diffstat"
@@ -133,6 +134,7 @@ apt_dependencies=(
 )
 dnf_dependencies=(
     "gawk"
+    "bzip2"
     "make"
     "wget"
     "tar"
@@ -430,12 +432,17 @@ _debug "Directory Results: $(ls ${YOCTO_RESULTS_DIR})"
 
 #Cherry pick the files we care about...
 YOCTO_RESULTS_BASENAME=$(basename "${YOCTO_RESULTS_SDIMG}" .rpi-sdimg)
-YOCTO_RESULTS_SDIMG=$(ls "${YOCTO_RESULTS_DIR}"/*.rootfs.ext3)
-YOCTO_RESULTS_EXT3=$(ls "${YOCTO_RESULTS_DIR}"/*.rootfs.rpi-sdimg)
+YOCTO_RESULTS_EXT3=$(ls "${YOCTO_RESULTS_DIR}"/*.rootfs.ext3)
+YOCTO_RESULTS_SDIMG=$(ls "${YOCTO_RESULTS_DIR}"/*.rootfs.rpi-sdimg)
+
+bzip2 "${YOCTO_RESULTS_SDIMG}" || _die "Failed to bzip ${YOCTO_RESULTS_SDIMG}"
+bzip2 "${YOCTO_RESULTS_EXT3}" || _die "Failed to bzip ${YOCTO_RESULTS_EXT3}"
 
 _debug "Generating sha256sums..."
-echo $(sha256sum "${YOCTO_RESULTS_SDIMG}" "${YOCTO_RESULTS_EXT3}") > "${YOCTO_RESULTS_DIR}"/$(basename "${YOCTO_RESULTS_SDIMG}" .rpi-sdimg).sha256sums || _die "Failed to generate sha256sums."
+echo $(sha256sum "${YOCTO_RESULTS_SDIMG}.bz2" "${YOCTO_RESULTS_EXT3}.bz2") > "${YOCTO_RESULTS_DIR}"/$(basename "${YOCTO_RESULTS_SDIMG}" .rootfs.rpi-sdimg).sha256sums || _die "Failed to generate sha256sums."
 
+# This should be done manually/locally
+# This feature should be stripped out in the future
 if [ "${ENABLE_GPG_SIGNING}" -eq 1 -a -n "${PGP_EMAIL}" ]; then
     _debug "Signing sha256sums..."
     gpg -vv --no-tty --local-user "${PGP_EMAIL}" --output "${YOCTO_RESULTS_BASENAME}".sha256sums.sig --detach-sig "${YOCTO_RESULTS_BASENAME}".sha256sums || _die "Failed to sign sha256sums."
