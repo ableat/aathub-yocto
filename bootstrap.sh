@@ -435,8 +435,10 @@ YOCTO_RESULTS_BASENAME=$(basename "${YOCTO_RESULTS_SDIMG}" .rpi-sdimg)
 YOCTO_RESULTS_EXT3=$(ls "${YOCTO_RESULTS_DIR}"/*.rootfs.ext3)
 YOCTO_RESULTS_SDIMG=$(ls "${YOCTO_RESULTS_DIR}"/*.rootfs.rpi-sdimg)
 
-bzip2 "${YOCTO_RESULTS_SDIMG}" || _die "Failed to bzip ${YOCTO_RESULTS_SDIMG}"
-bzip2 "${YOCTO_RESULTS_EXT3}" || _die "Failed to bzip ${YOCTO_RESULTS_EXT3}"
+#We force bzip since the target is linked, otherwise bzip will fail
+_debug "Compressing images..."
+bzip2 --force "${YOCTO_RESULTS_SDIMG}" || _die "Failed to bzip ${YOCTO_RESULTS_SDIMG}"
+bzip2 --force "${YOCTO_RESULTS_EXT3}" || _die "Failed to bzip ${YOCTO_RESULTS_EXT3}"
 
 _debug "Generating sha256sums..."
 echo $(sha256sum "${YOCTO_RESULTS_SDIMG}.bz2" "${YOCTO_RESULTS_EXT3}.bz2") > "${YOCTO_RESULTS_DIR}"/$(basename "${YOCTO_RESULTS_SDIMG}" .rootfs.rpi-sdimg).sha256sums || _die "Failed to generate sha256sums."
