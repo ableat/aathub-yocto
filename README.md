@@ -21,6 +21,12 @@
 
 Setups a development environment, compiles a [yocto](https://www.yoctoproject.org/)-based image, and optionally uploads the results to [S3](https://aws.amazon.com/s3/).
 
+## Resources
+
+Don't know anything about yocto? Read these:
+  - [yocto wiki](https://wiki.yoctoproject.org/wiki/Main_Page)
+  - [intro to yocto slides](https://docs.google.com/presentation/d/1LmI3mHoD_Dzl8wplIYcUBrFF8BzDb_EadTvfbnpSK7Q/edit#slide=id.p4)
+  - [advanced yocto slides](https://docs.google.com/presentation/d/1HoDtyN5SzlmuTN47ab4Y7w_i6c_VEW6EBUD944ntf38/edit#slide=id.p4)
 
 ## How to use
 
@@ -69,3 +75,5 @@ runqemu path/to/kernel-image.bin path/to/root-filesystem.ext3
 - We base64 a few files used in shippable's secure variables. Use the following command `base64 -w 0 /path/to/file`
 
 - The build system depends on `meta-aatlive`, a closed-source bitbake layer
+
+- PR builds will fail since secure variables aren't initalized. You have been warned... 
