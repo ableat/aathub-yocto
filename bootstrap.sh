@@ -362,7 +362,9 @@ BBLAYERS_NON_REMOVABLE ?= " \
 
 EOF
 
-YOCTO_EXTRA_PACKAGES=(    #layer dependency
+#You can find a list of all the availble packages here:
+#https://layers.openembedded.org/layerindex/branch/master/recipes/
+YOCTO_EXTRA_PACKAGES=(
     "curl"
     "ethtool"
     "gawk"
